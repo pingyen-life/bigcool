@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大倉酷下班計時器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-size: cover;
+            background-position: center; 
+            color: #333;
+            transition: background-image 1s ease-in-out; 
+        }
+        
+        #container {
+            background-color: rgba(0, 0, 0, 0.3); 
+            padding: 40px 60px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); 
+            text-align: center;
+            position: fixed; 
+            top: 20px;       
+            left: 20px;      
+            z-index: 999; 
+            color: white; 
+            backdrop-filter: blur(5px); /* 增加毛玻璃效果 */
+        }
+        
+        h1 {
+            color: white; 
+            cursor: grab; 
+            user-select: none; 
+        }
+        
+        #timer-display {
+            font-size: 4em;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #FFD700; 
+        }
+        
+        #message-display {
+            font-size: 1.5em;
+            min-height: 2em;
+            color: #d9534f; 
+        }
+
+        #controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.95); 
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); 
+            z-index: 1000;
+            text-align: left;
+            border: 1px solid #ccc;
+            max-height: calc(100vh - 20px); 
+            overflow-y: auto; 
+            display: none; 
+            transition: opacity 0.3s ease-in-out;
+            opacity: 0;
+            width: 250px; 
+        }
+        
+        #controls.visible {
+            display: block;
+            opacity: 1;
+        }
+        
+        #toggle-controls-btn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 10px 15px;
+            background-color: #337ab7; 
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            z-index: 1001; 
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: right 0.3s, background-color 0.3s;
+        }
+
+        #controls.visible ~ #toggle-controls-btn {
+             right: 275px; 
+        }
+        
+        #controls label {
+            display: block;
+            margin-top: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        #controls input[type="color"] {
+            width: 50px;
+            height: 25px;
+            padding: 0;
+            border: none;
+            cursor: pointer;
+            vertical-align: middle;
+        }
+        #controls input[type="text"] { 
+            width: 100%;
+            padding: 5px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+        #controls hr {
+            border: 0;
+            border-top: 1px solid #ddd;
+            margin: 10px 0;
+        }
+        
+        #link-buttons {
+            margin-top: 20px; 
+            margin-bottom: 20px; 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center;
+        }
+
+        .custom-link-btn {
+            background-color: #5cb85c; /* 預設顏色，會被 JS 覆蓋 */
+            color: white;
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            text-decoration: none; 
+            display: inline-block; 
+            transition: background-color 0.3s, filter 0.2s;
+        }
+
+        .custom-link-btn:hover {
+            filter: brightness(0.9);
+        }
+        
+        #radio-player-container {
+            position: fixed; 
+            bottom: 20px; 
+            right: 20px;
+            z-index: 990; 
+            text-align: center;
+        }
+
+        #radio-iframe-wrapper {
+            width: 350px; 
+            height: 500px; 
+            border-radius: 8px;
+            overflow: hidden; 
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); 
+        }
+
+        #toggle-radio-btn {
+            margin-bottom: 10px; 
+        }
+
+        #bgm-radio-frame {
+            border: none; 
+        }
+    </style>
+</head>
+<body>
+    
+    <button id="toggle-controls-btn">⚙️ 設定</button>
+
+    <div id="controls">
+        <button id="close-controls-btn"
+                style="float: right; background: none; border: none; font-size: 1.5em; cursor: pointer; color: #333; line-height: 1;">&times;</button>
+        <h2>🎨 設定</h2>
+        
+        <label for="time-color">⏱️ 時間顏色:</label>
+        <input type="color" id="time-color" value="#FFD700">
+
+        <label for="text-color">💬 文字顏色:</label>
+        <input type="color" id="text-color" value="#FFFFFF">
+
+        <label for="btn-color">🔘 按鈕背景顏色:</label>
+        <input type="color" id="btn-color" value="#5cb85c">
+        
+        <hr>
+
+        <label for="bg-image-list">🖼️ 背景輪播清單 (檔名):</label>
+        <input type="text" id="bg-image-list" placeholder="例如: 1.gif, 2.jpg" value="">
+        <p style="font-size: 10px; margin: 3px 0 8px 0;">(用逗號 , 分隔多個檔名)</p>
+        <hr>
+
+        <h3>🔗 自訂連結設定 (3-7)</h3>
+        <div id="link-inputs-area">
+            <h3>連結 3</h3>
+            <input type="text" id="link3-name" placeholder="名稱" value="連結 3">
+            <input type="text" id="link3-url" placeholder="網址">
+            <h3>連結 4</h3>
+            <input type="text" id="link4-name" placeholder="名稱" value="連結 4">
+            <input type="text" id="link4-url" placeholder="網址">
+            <h3>連結 5</h3>
+            <input type="text" id="link5-name" placeholder="名稱" value="連結 5">
+            <input type="text" id="link5-url" placeholder="網址">
+            <h3>連結 6</h3>
+            <input type="text" id="link6-name" placeholder="名稱" value="連結 6">
+            <input type="text" id="link6-url" placeholder="網址">
+            <h3>連結 7</h3>
+            <input type="text" id="link7-name" placeholder="名稱" value="連結 7">
+            <input type="text" id="link7-url" placeholder="網址">
+        </div>
+
+        <hr>
+        <label>調整計時器位置：</label>
+        <p style="font-size: 12px; margin: 5px 0;">(拖曳中央區塊的標題)</p>
+    </div>
+    
+    <div id="container">
+        <h1 id="draggable-handle">大倉酷下班計時器</h1>
+        <div id="current-time"></div>
+        <div id="encouraging-message"></div>
+        <div id="timer-display">準備中...</div>
+        <div id="message-display"></div>
+        <p style="font-size: 0.8em; margin-top: 5px;">目標下班時間：22:00</p>
+    </div>
+
+    <div id="radio-player-container">
+        <button id="toggle-radio-btn" class="custom-link-btn">開啟 BGM 電台</button>
+        <div id="radio-iframe-wrapper" style="display: none;">
+            <iframe id="bgm-radio-frame" src="https://www.bgmradio.com/signin" width="100%" height="100%" frameborder="0" allow="autoplay"></iframe>
+        </div>
+    </div>
+
+    <div id="link-buttons">
+        <a id="link-btn-1" class="custom-link-btn" href="https://dccool.work/" target="_blank">cool系統</a>
+        <a id="link-btn-2" class="custom-link-btn" href="http://jwnet3.jwpsc.com/OrderHome" target="_blank">pos收銀系統</a>
+        <a id="link-btn-3" class="custom-link-btn" href="#" target="_blank">連結 3</a>
+        <a id="link-btn-4" class="custom-link-btn" href="#" target="_blank">連結 4</a>
+        <a id="link-btn-5" class="custom-link-btn" href="#" target="_blank">連結 5</a>
+        <a id="link-btn-6" class="custom-link-btn" href="#" target="_blank">連結 6</a>
+        <a id="link-btn-7" class="custom-link-btn" href="#" target="_blank">連結 7</a>
+    </div>
+    
+    <script>
+        // --- 變數定義 ---
+        let timerInterval, rotationInterval, endTime;
+        const originalTitle = '大倉酷下班計時器';
+        const container = document.getElementById('container'); 
+        const draggableHandle = document.getElementById('draggable-handle'); 
+        const timerDisplay = document.getElementById('timer-display');
+        const messageDisplay = document.getElementById('message-display');
+        const currentTimeDisplay = document.getElementById('current-time');
+        const encouragingMessageDisplay = document.getElementById('encouraging-message');
+        
+        const controls = document.getElementById('controls');
+        const toggleBtn = document.getElementById('toggle-controls-btn');
+        const closeBtn = document.getElementById('close-controls-btn'); 
+        const timeColorInput = document.getElementById('time-color');
+        const textColorInput = document.getElementById('text-color');
+        const btnColorInput = document.getElementById('btn-color'); // 按鈕顏色
+        const bgImageListInput = document.getElementById('bg-image-list'); 
+
+        const radioContainer = document.getElementById('radio-player-container');
+        const radioWrapper = document.getElementById('radio-iframe-wrapper');
+        const toggleRadioBtn = document.getElementById('toggle-radio-btn');
+
+        // 連結設定 (3-7)
+        const linkInputs = [];
+        for (let i = 3; i <= 7; i++) {
+            linkInputs.push({
+                nameInput: document.getElementById(`link${i}-name`),
+                urlInput: document.getElementById(`link${i}-url`),
+                btn: document.getElementById(`link-btn-${i}`)
+            });
+        }
+        
+        // LocalStorage Keys
+        const LS_TIME_COLOR = 'timerTimeColor';
+        const LS_TEXT_COLOR = 'timerTextColor';
+        const LS_BTN_COLOR = 'timerBtnColor'; // 新增
+        const LS_BG_LIST = 'timerBgImageList'; 
+        const LS_POS_X = 'containerPositionX';
+        const LS_POS_Y = 'containerPositionY';
+        const LS_RADIO_VISIBLE = 'radioPlayerVisible';
+
+        const LS_LINK_KEYS = [];
+        for (let i = 3; i <= 7; i++) {
+            LS_LINK_KEYS.push({ name: `link${i}Name`, url: `link${i}Url` });
+        }
+
+        const defaultBackgroundImages = ['1.gif', '2.gif', '3.gif'];
+        let currentImageIndex = 0;
+        let activeBackgroundImages = []; 
+
+        // --- 功能實作 ---
+
+        function rotateBackground() {
+            if (activeBackgroundImages.length === 0) return;
+            document.body.style.backgroundImage = `url('${activeBackgroundImages[currentImageIndex]}')`;
+            currentImageIndex = (currentImageIndex + 1) % activeBackgroundImages.length;
+        }
+
+        function loadRadioState() {
+            const isVisible = localStorage.getItem(LS_RADIO_VISIBLE) === 'true';
+            radioContainer.style.display = 'block'; 
+            if (isVisible) {
+                radioWrapper.style.display = 'block';
+                toggleRadioBtn.textContent = '關閉 BGM 電台';
+            } else {
+                radioWrapper.style.display = 'none';
+                toggleRadioBtn.textContent = '開啟 BGM 電台';
+            }
+        }
+
+        toggleRadioBtn.addEventListener('click', () => {
+            const isVisible = radioWrapper.style.display !== 'none';
+            if (isVisible) {
+                radioWrapper.style.display = 'none';
+                toggleRadioBtn.textContent = '開啟 BGM 電台';
+                localStorage.setItem(LS_RADIO_VISIBLE, 'false');
+            } else {
+                radioWrapper.style.display = 'block';
+                toggleRadioBtn.textContent = '關閉 BGM 電台';
+                localStorage.setItem(LS_RADIO_VISIBLE, 'true');
+            }
+        });
+
+        function updateColors() {
+            const generalColor = textColorInput.value;
+            const timeColor = timeColorInput.value;
+            const btnColor = btnColorInput.value; // 取得按鈕顏色
+
+            timerDisplay.style.color = timeColor;
+            container.style.color = generalColor; 
+            draggableHandle.style.color = generalColor;
+            currentTimeDisplay.style.color = generalColor;
+            encouragingMessageDisplay.style.color = generalColor;
+
+            // 動態更新所有按鈕背景色
+            const allButtons = document.querySelectorAll('.custom-link-btn');
+            allButtons.forEach(btn => {
+                btn.style.backgroundColor = btnColor;
+            });
+
+            saveSettings();
+        }
+
+        function saveSettings() {
+            localStorage.setItem(LS_TIME_COLOR, timeColorInput.value);
+            localStorage.setItem(LS_TEXT_COLOR, textColorInput.value);
+            localStorage.setItem(LS_BTN_COLOR, btnColorInput.value); // 儲存按鈕色
+            localStorage.setItem(LS_BG_LIST, bgImageListInput.value.trim()); 
+            linkInputs.forEach((link, index) => {
+                localStorage.setItem(LS_LINK_KEYS[index].name, link.nameInput.value.trim());
+                localStorage.setItem(LS_LINK_KEYS[index].url, link.urlInput.value.trim());
+            });
+        }
+
+        function loadSettings() {
+            const savedTimeColor = localStorage.getItem(LS_TIME_COLOR);
+            const savedTextColor = localStorage.getItem(LS_TEXT_COLOR);
+            const savedBtnColor = localStorage.getItem(LS_BTN_COLOR); // 載入按鈕色
+
+            if (savedTimeColor) timeColorInput.value = savedTimeColor;
+            if (savedTextColor) textColorInput.value = savedTextColor;
+            if (savedBtnColor) btnColorInput.value = savedBtnColor;
+            
+            const savedBgList = localStorage.getItem(LS_BG_LIST);
+            bgImageListInput.value = savedBgList !== null ? savedBgList : defaultBackgroundImages.join(', ');
+
+            linkInputs.forEach((link, index) => {
+                const savedName = localStorage.getItem(LS_LINK_KEYS[index].name);
+                const savedUrl = localStorage.getItem(LS_LINK_KEYS[index].url);
+                if (savedName !== null) link.nameInput.value = savedName;
+                if (savedUrl !== null) link.urlInput.value = savedUrl;
+            });
+            
+            updateLinkButtons();
+
+            const savedPosX = localStorage.getItem(LS_POS_X);
+            const savedPosY = localStorage.getItem(LS_POS_Y);
+            if (savedPosX && savedPosY) {
+                container.style.left = savedPosX;
+                container.style.top = savedPosY;
+            }
+        }
+
+        function updateLinkButtons() {
+            linkInputs.forEach((link, index) => {
+                const name = link.nameInput.value.trim();
+                const url = link.urlInput.value.trim();
+                link.btn.textContent = name || `連結 ${index + 3}`; 
+                link.btn.href = url || '#';
+                link.btn.style.display = (url === '') ? 'none' : 'inline-block'; 
+            });
+            saveSettings();
+        }
+
+        function updateBackgroundList() {
+            const listString = bgImageListInput.value.trim();
+            activeBackgroundImages = listString === '' ? defaultBackgroundImages : listString.split(',').map(s => s.trim()).filter(s => s !== '');
+            currentImageIndex = 0; 
+            if (rotationInterval) clearInterval(rotationInterval);
+            if (activeBackgroundImages.length > 0) {
+                rotationInterval = setInterval(rotateBackground, 5000);
+                rotateBackground();
+            } else {
+                document.body.style.backgroundImage = 'none';
+            }
+            saveSettings();
+        }
+
+        // 監聽
+        timeColorInput.addEventListener('input', updateColors);
+        textColorInput.addEventListener('input', updateColors);
+        btnColorInput.addEventListener('input', updateColors); // 監聽按鈕顏色變更
+        bgImageListInput.addEventListener('input', updateBackgroundList); 
+        linkInputs.forEach(link => {
+            link.nameInput.addEventListener('input', updateLinkButtons);
+            link.urlInput.addEventListener('input', updateLinkButtons);
+        });
+        
+        toggleBtn.addEventListener('click', () => controls.classList.toggle('visible'));
+        closeBtn.addEventListener('click', () => controls.classList.toggle('visible'));
+
+        // 拖曳功能
+        let isDragging = false, offset = { x: 0, y: 0 };
+        draggableHandle.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            offset.x = e.clientX - container.getBoundingClientRect().left;
+            offset.y = e.clientY - container.getBoundingClientRect().top;
+            draggableHandle.style.cursor = 'grabbing'; 
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            container.style.left = (e.clientX - offset.x) + 'px';
+            container.style.top = (e.clientY - offset.y) + 'px';
+        });
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                draggableHandle.style.cursor = 'grab'; 
+                localStorage.setItem(LS_POS_X, container.style.left);
+                localStorage.setItem(LS_POS_Y, container.style.top);
+            }
+        });
+
+        // 計時器邏輯
+        function initializeTimer() {
+            loadSettings();
+            updateColors();
+            updateBackgroundList(); 
+            loadRadioState();
+            
+            endTime = new Date();
+            endTime.setHours(22, 0, 0, 0);
+            if (endTime.getTime() < new Date().getTime()) endTime.setDate(endTime.getDate() + 1);
+
+            setInterval(() => {
+                const now = new Date();
+                const diff = endTime.getTime() - now.getTime();
+                if (diff < 0) {
+                    timerDisplay.textContent = '00:00:00';
+                    messageDisplay.textContent = '下班囉！';
+                    return;
+                }
+                const h = Math.floor(diff / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+                const timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                timerDisplay.textContent = timeStr;
+                document.title = timeStr;
+                
+                // 更新時間顯示與格言
+                currentTimeDisplay.textContent = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+            }, 1000);
+        }
+
+        initializeTimer();
+    </script>
+</body>
+</html>
