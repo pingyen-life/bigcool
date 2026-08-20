@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>大倉酷眼鏡到貨銷片核對系統</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:"Microsoft JhengHei",Arial,sans-serif;background:#f4f6f8;color:#222}
+.container{max-width:1100px;margin:0 auto;padding:24px}
+h1{margin:0 0 8px;font-size:30px}
+.sub{color:#666;margin-bottom:22px}
+.card{background:#fff;border-radius:16px;padding:20px;margin-bottom:18px;box-shadow:0 3px 15px #0000000d}
+h2{margin:0 0 14px;font-size:20px}
+textarea{width:100%;min-height:150px;border:1px solid #ccd2d8;border-radius:10px;padding:12px;font-size:16px;font-family:monospace}
+button{border:0;border-radius:9px;padding:11px 18px;font-size:16px;cursor:pointer;margin:6px 6px 0 0}
+.primary{background:#222;color:#fff}.secondary{background:#e9edf1}.danger{background:#d33;color:white}
+.scanbox{display:flex;gap:10px}
+.scanbox input{flex:1;padding:14px;border:2px solid #222;border-radius:10px;font-size:20px}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.stat{background:#f1f3f5;border-radius:10px;padding:10px 15px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:11px;border-bottom:1px solid #eee;text-align:left}
+th{background:#f7f7f7}
+.ok{color:#138a36;font-weight:700}.warn{color:#b77700;font-weight:700}.bad{color:#c62828;font-weight:700}
+.complete{background:#e9f8ee}.over{background:#fff0f0}
+.small{font-size:13px;color:#777}
+.hidden{display:none}
+#message{margin-top:10px;font-weight:700;min-height:24px}
+@media(max-width:700px){.container{padding:12px}h1{font-size:25px}.scanbox{flex-direction:column}th,td{padding:8px 5px;font-size:14px}}
+</style>
+</head>
+<body>
+<div id="loginScreen" style="position:fixed;inset:0;background:#f4f6f8;display:flex;align-items:center;justify-content:center;z-index:9999">
+  <div style="background:#fff;width:min(420px,90%);padding:32px;border-radius:18px;box-shadow:0 8px 30px #0002;text-align:center">
+    <div style="font-size:42px;margin-bottom:8px">🔐</div>
+    <h2 style="margin:0 0 8px">大倉酷眼鏡到貨銷片核對系統</h2>
+    <div style="color:#777;margin-bottom:20px">請輸入使用密碼</div>
+    <div style="font-size:13px;color:#999;margin-top:-10px;margin-bottom:14px">製作者：宋品言</div>
+    <input id="passwordInput" type="password" inputmode="numeric" maxlength="8" placeholder="請輸入 8 位密碼"
+      style="width:100%;padding:14px;border:2px solid #ccc;border-radius:10px;font-size:22px;text-align:center;letter-spacing:5px">
+    <button onclick="login()" style="width:100%;margin-top:12px;background:#222;color:#fff;border:0;border-radius:10px;padding:13px;font-size:17px;cursor:pointer">登入</button>
+    <div id="loginMsg" style="color:#c62828;margin-top:12px;min-height:22px"></div>
+  </div>
+</div>
+<div class="container">
+  <h1>📦 大倉酷眼鏡到貨銷片核對系統</h1>
+  <div style="font-size:13px;color:#888;margin-bottom:6px">製作者：宋品言</div>
+  <div class="sub">先輸入「到貨明細編號＋應到數量」，再使用 USB 條碼掃描器逐筆掃描。</div>
+
+  <div class="card">
+    <h2>① 建立到貨資料</h2>
+    <div class="small">每行一筆，格式：到貨明細編號［Tab／空白／逗號］數量。也可直接從 Excel 複製兩欄後貼上。</div>
+    <textarea id="dataInput" placeholder="例如：
+A123456    5
+A123457    3
+A123458    10"></textarea>
+    <br>
+    <button class="primary" onclick="loadData()">建立到貨單</button>
+    <button class="secondary" onclick="fillDemo()">載入範例</button>
+    <button class="secondary" onclick="clearAll()">全部清除</button>
+  </div>
+
+  <div id="scanSection" class="card hidden">
+    <h2>② 開始掃描</h2>
+    <div class="scanbox">
+      <input id="scanInput" autocomplete="off" autofocus placeholder="請掃描條碼……">
+      <button class="primary" onclick="scanCode()">確認</button>
+      <button class="secondary" onclick="undoScan()">↩ 撤銷上一筆</button>
+    </div>
+    <div id="message"></div>
+    <div class="stats">
+      <div class="stat">品項：<b id="totalItems">0</b></div>
+      <div class="stat">已完成：<b id="doneItems">0</b></div>
+      <div class="stat">總應到：<b id="totalQty">0</b></div>
+      <div class="stat">總已掃：<b id="scannedQty">0</b></div>
+    </div>
+  </div>
+
+  <div id="listSection" class="card hidden">
+    <h2>③ 核對結果</h2>
+    <table>
+      <thead><tr><th>到貨明細編號</th><th>應到數量</th><th>已掃數量</th><th>差異</th><th>狀態</th></tr></thead>
+      <tbody id="list"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+
+const SYSTEM_PASSWORD = "19880703";
+function login(){
+  const input=document.getElementById("passwordInput");
+  if(input.value===SYSTEM_PASSWORD){
+    document.getElementById("loginScreen").style.display="none";
+    sessionStorage.setItem("deliveryLogin","1");
+    document.getElementById("scanInput")?.focus();
+  }else{
+    document.getElementById("loginMsg").textContent="密碼錯誤，請重新輸入。";
+    input.value="";
+    input.focus();
+  }
+}
+document.getElementById("passwordInput").addEventListener("keydown",e=>{
+  if(e.key==="Enter") login();
+});
+
+let items = new Map();
+let history = [];
+
+function parseData(text){
+  const map = new Map();
+  text.split(/\r?\n/).forEach(line=>{
+    line=line.trim();
+    if(!line) return;
+    let p=line.split(/\t|,|;/);
+    if(p.length<2) p=line.split(/\s+/);
+    if(p.length<2) return;
+    const code=p[0].trim(), qty=Number(p[1].trim());
+    if(code && Number.isFinite(qty) && qty>=0) map.set(code,(map.get(code)||0)+qty);
+  });
+  return map;
+}
+
+function loadData(){
+  const map=parseData(document.getElementById('dataInput').value);
+  if(!map.size){alert('沒有讀到有效資料，請確認格式。');return;}
+  items=new Map([...map].map(([code,qty])=>[code,{expected:qty,scanned:0}]));
+  history=[];
+  document.getElementById('scanSection').classList.remove('hidden');
+  document.getElementById('listSection').classList.remove('hidden');
+  render();
+  document.getElementById('scanInput').focus();
+  showMsg('到貨單建立完成，請開始掃描。','ok');
+}
+
+function scanCode(){
+  const input=document.getElementById('scanInput');
+  const code=input.value.trim();
+  input.value='';
+  input.focus();
+  if(!code)return;
+  if(!items.has(code)){
+    showMsg('❌ 找不到此到貨明細編號：'+code,'bad');
+    beep(180,250); return;
+  }
+  const item=items.get(code);
+  history.push(code);
+  item.scanned++;
+  if(item.scanned<=item.expected){
+    showMsg('✓ '+code+' 掃描成功：'+item.scanned+' / '+item.expected,'ok');
+    beep(900,80);
+  }else{
+    showMsg('⚠ '+code+' 已超過應到數量！目前 '+item.scanned+' / '+item.expected,'bad');
+    beep(180,400);
+  }
+  render();
+}
+
+function undoScan(){
+  const code=history.pop();
+  if(!code){showMsg('沒有可以撤銷的掃描。','warn');return;}
+  items.get(code).scanned=Math.max(0,items.get(code).scanned-1);
+  showMsg('已撤銷：'+code,'warn');
+  render();
+  document.getElementById('scanInput').focus();
+}
+
+function render(){
+  const tbody=document.getElementById('list');
+  tbody.innerHTML='';
+  let total=0,scanned=0,done=0;
+  for(const [code,x] of items){
+    total+=x.expected; scanned+=x.scanned;
+    const complete=x.scanned===x.expected, over=x.scanned>x.expected;
+    if(complete)done++;
+    const diff=x.scanned-x.expected;
+    const tr=document.createElement('tr');
+    if(complete)tr.className='complete'; else if(over)tr.className='over';
+    tr.innerHTML=`<td>${esc(code)}</td><td>${x.expected}</td><td>${x.scanned}</td>
+      <td class="${diff===0?'ok':diff>0?'bad':'warn'}">${diff>0?'+'+diff:diff}</td>
+      <td class="${complete?'ok':over?'bad':'warn'}">${complete?'✓ 完成':over?'❌ 超過':'尚缺 '+(x.expected-x.scanned)}</td>`;
+    tbody.appendChild(tr);
+  }
+  document.getElementById('totalItems').textContent=items.size;
+  document.getElementById('doneItems').textContent=done;
+  document.getElementById('totalQty').textContent=total;
+  document.getElementById('scannedQty').textContent=scanned;
+  if(items.size && done===items.size && [...items.values()].every(x=>x.scanned===x.expected)){
+    showMsg('🎉 全部品項核對完成！','ok');
+  }
+}
+
+function showMsg(t,cls){const e=document.getElementById('message');e.textContent=t;e.className=cls}
+function beep(freq,dur){
+  try{const C=window.AudioContext||window.webkitAudioContext,c=new C(),o=c.createOscillator(),g=c.createGain();
+  o.frequency.value=freq;o.connect(g);g.connect(c.destination);o.start();g.gain.setValueAtTime(.08,c.currentTime);o.stop(c.currentTime+dur/1000);}catch(e){}
+}
+function fillDemo(){
+ document.getElementById('dataInput').value='A123456\\t5\\nA123457\\t3\\nA123458\\t10\\nA123459\\t2';
+}
+function clearAll(){
+ if(!confirm('確定要清除目前資料嗎？'))return;
+ items.clear();history=[];
+ document.getElementById('dataInput').value='';
+ document.getElementById('scanSection').classList.add('hidden');
+ document.getElementById('listSection').classList.add('hidden');
+ document.getElementById('message').textContent='';
+}
+function esc(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+
+document.getElementById('scanInput').addEventListener('keydown',e=>{
+ if(e.key==='Enter'){e.preventDefault();scanCode();}
+});
+</script>
+</body>
+</html>
