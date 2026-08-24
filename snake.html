@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>手機版大畫面貪食蛇遊戲</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            touch-action: manipulation; /* 防止手機雙擊縮放延遲 */
+        }
+
+        h1 {
+            margin: 5px 0;
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+        }
+
+        #scoreboard {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            display: flex;
+            gap: 20px;
+        }
+
+        /* 讓畫布在手機上能自動適應螢幕寬度，最大不超過 450px */
+        canvas {
+            border: 4px solid #4CAF50;
+            background-color: #111111;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+            max-width: 90vw;
+            max-height: 90vw;
+            width: 400px;
+            height: 400px;
+        }
+
+        .instructions {
+            margin-top: 10px;
+            color: #aaaaaa;
+            font-size: 0.8rem;
+            text-align: center;
+            line-height: 1.4;
+            padding: 0 10px;
+        }
+        
+        .highlight {
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        /* 手機方向控制虛擬按鈕區塊 */
+        .controls-container {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: repeat(3, 70px);
+            grid-template-rows: repeat(2, 60px);
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .ctrl-btn {
+            background-color: #333333;
+            color: white;
+            border: 2px solid #555555;
+            font-size: 1.5rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            cursor: pointer;
+            outline: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: background 0.1s;
+        }
+
+        .ctrl-btn:active {
+            background-color: #4CAF50;
+            border-color: #81C784;
+            transform: scale(0.95);
+        }
+
+        /* 調整按鈕排版位置 */
+        .btn-up { grid-column: 2; grid-row: 1; }
+        .btn-left { grid-column: 1; grid-row: 2; }
+        .btn-down { grid-column: 2; grid-row: 2; }
+        .btn-right { grid-column: 3; grid-row: 2; }
+    </style>
+</head>
+<body>
+
+    <h1>🐍 手機版貪食蛇</h1>
+    
+    <div id="scoreboard">
+        <div>得分: <span id="score">0</span></div>
+        <div>最高分: <span id="highScore">0</span></div>
+        <div>速度等級: <span id="speedLevel">1</span></div>
+    </div>
+
+    <canvas id="snakeCanvas" width="600" height="600"></canvas>
+
+    <div class="instructions">
+        使用鍵盤或下方<strong>虛擬按鈕</strong>控制方向<br>
+        🔴 紅蘋果 (+10分) | <span class="highlight">🟡 金蘋果 (+30分)</span> | ⬛ 障礙物 (撞到死)
+    </div>
+
+    <!-- 手機虛擬控制按鈕 -->
+    <div class="controls-container">
+        <button class="ctrl-btn btn-up" id="btnUp">⬆️</button>
+        <button class="ctrl-btn btn-left" id="btnLeft">⬅️</button>
+        <button class="ctrl-btn btn-down" id="btnDown">⬇️</button>
+        <button class="ctrl-btn btn-right" id="btnRight">➡️</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('snakeCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const scoreElement = document.getElementById('score');
+        const highScoreElement = document.getElementById('highScore');
+        const speedLevelElement = document.getElementById('speedLevel');
+
+        const gridSize = 30;
+        const tileCount = canvas.width / gridSize;
+
+        let score = 0;
+        let highScore = 0;
+        let speedLevel = 1;
+        let dx = gridSize;
+        let dy = 0;
+        let isGameOver = false;
+        let gameInterval;
+        let gameSpeed = 120;
+
+        let snake = [];
+        let food = { x: 0, y: 0 };
+        let goldenFood = null;
+        let goldenFoodTimer = 0;
+        let obstacles = [];
+
+        // Web Audio API 音效生成器
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            initAudio();
+            if (!audioCtx) return;
+
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            let now = audioCtx.currentTime;
+
+            if (type === 'eat') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+                gainNode.gain.setValueAtTime(0.15, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'golden') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.setValueAtTime(900, now + 0.08);
+                gainNode.gain.setValueAtTime(0.2, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'gameover') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.linearRampToValueAtTime(80, now + 0.4);
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            }
+        }
+
+        // 鍵盤事件監聽
+        document.addEventListener('keydown', (e) => handleInput(e.keyCode));
+
+        // 虛擬按鈕事件監聽 (支援點擊與觸控)
+        document.getElementById('btnUp').addEventListener('click', () => handleInput(38));
+        document.getElementById('btnLeft').addEventListener('click', () => handleInput(37));
+        document.getElementById('btnDown').addEventListener('click', () => handleInput(40));
+        document.getElementById('btnRight').addEventListener('click', () => handleInput(39));
+
+        startGame();
+
+        function startGame() {
+            resetGameVariables();
+            generateObstacles();
+            generateFood();
+            startInterval();
+        }
+
+        function resetGameVariables() {
+            score = 0;
+            speedLevel = 1;
+            gameSpeed = 120;
+            dx = gridSize;
+            dy = 0;
+            isGameOver = false;
+            scoreElement.textContent = score;
+            speedLevelElement.textContent = speedLevel;
+
+            snake = [
+                { x: 9 * gridSize, y: 10 * gridSize },
+                { x: 8 * gridSize, y: 10 * gridSize },
+                { x: 7 * gridSize, y: 10 * gridSize }
+            ];
+            goldenFood = null;
+            goldenFoodTimer = 0;
+        }
+
+        function startInterval() {
+            clearInterval(gameInterval);
+            gameInterval = setInterval(main, gameSpeed);
+        }
+
+        function main() {
+            if (hasGameEnded()) {
+                isGameOver = true;
+                clearInterval(gameInterval);
+                playSound('gameover');
+                drawGameOver();
+                return;
+            }
+
+            clearCanvas();
+            drawObstacles();
+            drawFood();
+            drawGoldenFood();
+            moveSnake();
+            drawSnake();
+
+            if (goldenFood) {
+                goldenFoodTimer--;
+                if (goldenFoodTimer <= 0) {
+                    goldenFood = null;
+                }
+            } else {
+                if (Math.random() < 0.03) {
+                    generateGoldenFood();
+                }
+            }
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = "#111111";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawSnake() {
+            snake.forEach((part, index) => {
+                ctx.fillStyle = index === 0 ? '#4CAF50' : '#81C784';
+                ctx.strokeStyle = '#111111';
+                ctx.fillRect(part.x, part.y, gridSize, gridSize);
+                ctx.strokeRect(part.x, part.y, gridSize, gridSize);
+            });
+        }
+
+        function moveSnake() {
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+            snake.unshift(head);
+
+            let ateSomething = false;
+
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                ateSomething = true;
+                playSound('eat');
+                generateFood();
+            }
+
+            if (goldenFood && head.x === goldenFood.x && head.y === goldenFood.y) {
+                score += 30;
+                ateSomething = true;
+                playSound('golden');
+                goldenFood = null;
+            }
+
+            if (ateSomething) {
+                scoreElement.textContent = score;
+                if (score > highScore) {
+                    highScore = score;
+                    highScoreElement.textContent = highScore;
+                }
+                let newLevel = Math.floor(score / 50) + 1;
+                if (newLevel !== speedLevel) {
+                    speedLevel = newLevel;
+                    speedLevelElement.textContent = speedLevel;
+                    gameSpeed = Math.max(60, 120 - (speedLevel - 1) * 10);
+                    startInterval();
+                }
+            } else {
+                snake.pop();
+            }
+        }
+
+        function generateFood() {
+            food.x = Math.floor(Math.random() * tileCount) * gridSize;
+            food.y = Math.floor(Math.random() * tileCount) * gridSize;
+
+            if (checkCollisionWithSnakeOrObstacles(food.x, food.y)) {
+                generateFood();
+            }
+        }
+
+        function generateGoldenFood() {
+            let gx = Math.floor(Math.random() * tileCount) * gridSize;
+            let gy = Math.floor(Math.random() * tileCount) * gridSize;
+
+            if (!checkCollisionWithSnakeOrObstacles(gx, gy) && !(gx === food.x && gy === food.y)) {
+                goldenFood = { x: gx, y: gy };
+                goldenFoodTimer = 70;
+            }
+        }
+
+        function generateObstacles() {
+            obstacles = [];
+            for (let i = 0; i < 5; i++) {
+                let ox = Math.floor(Math.random() * (tileCount - 6) + 3) * gridSize;
+                let oy = Math.floor(Math.random() * (tileCount - 6) + 3) * gridSize;
+                obstacles.push({ x: ox, y: oy });
+            }
+        }
+
+        function checkCollisionWithSnakeOrObstacles(x, y) {
+            for (let part of snake) {
+                if (part.x === x && part.y === y) return true;
+            }
+            for (let obs of obstacles) {
+                if (obs.x === x && obs.y === y) return true;
+            }
+            return false;
+        }
+
+        function drawFood() {
+            ctx.fillStyle = '#FF5252';
+            ctx.beginPath();
+            let radius = gridSize / 2;
+            ctx.arc(food.x + radius, food.y + radius, radius - 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawGoldenFood() {
+            if (!goldenFood) return;
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            let radius = gridSize / 2;
+            ctx.arc(goldenFood.x + radius, goldenFood.y + radius, radius - 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.lineWidth = 1;
+        }
+
+        function drawObstacles() {
+            ctx.fillStyle = '#555555';
+            obstacles.forEach(obs => {
+                ctx.fillRect(obs.x + 2, obs.y + 2, gridSize - 4, gridSize - 4);
+                ctx.strokeStyle = '#777777';
+                ctx.strokeRect(obs.x + 2, obs.y + 2, gridSize - 4, gridSize - 4);
+            });
+        }
+
+        function handleInput(keyCode) {
+            const LEFT = 37, UP = 38, RIGHT = 39, DOWN = 40;
+            const W = 87, A = 65, S = 83, D = 68;
+
+            const goingUp = dy === -gridSize;
+            const goingDown = dy === gridSize;
+            const goingRight = dx === gridSize;
+            const goingLeft = dx === -gridSize;
+
+            if (isGameOver) {
+                if ([LEFT, UP, RIGHT, DOWN, W, A, S, D].includes(keyCode)) {
+                    startGame();
+                }
+                return;
+            }
+
+            if ((keyCode === LEFT || keyCode === A) && !goingRight) {
+                dx = -gridSize;
+                dy = 0;
+            }
+            if ((keyCode === UP || keyCode === W) && !goingDown) {
+                dx = 0;
+                dy = -gridSize;
+            }
+            if ((keyCode === RIGHT || keyCode === D) && !goingLeft) {
+                dx = gridSize;
+                dy = 0;
+            }
+            if ((keyCode === DOWN || keyCode === S) && !goingUp) {
+                dx = 0;
+                dy = gridSize;
+            }
+        }
+
+        function hasGameEnded() {
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+                return true;
+            }
+
+            for (let i = 0; i < snake.length; i++) {
+                if (snake[i].x === head.x && snake[i].y === head.y) {
+                    return true;
+                }
+            }
+
+            for (let obs of obstacles) {
+                if (obs.x === head.x && obs.y === head.y) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        function drawGameOver() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "white";
+            ctx.font = "bold 35px 'Segoe UI'";
+            ctx.textAlign = "center";
+            ctx.fillText("遊戲結束", canvas.width / 2, canvas.height / 2 - 20);
+
+            ctx.font = "18px 'Segoe UI'";
+            ctx.fillStyle = "#AAAAAA";
+            ctx.fillText("點擊方向按鈕重新挑戰", canvas.width / 2, canvas.height / 2 + 25);
+        }
+    </script>
+</body>
+</html>
