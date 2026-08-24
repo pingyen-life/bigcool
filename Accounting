@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>記帳行事曆 - 登入系統</title>
+    <!-- 引入 SheetJS (xlsx) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { background-color: #f4f6f9; color: #333; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        
+        /* 登入畫面樣式 */
+        #authContainer { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 360px; text-align: center; }
+        #authContainer h2 { margin-bottom: 20px; color: #2c3e50; }
+        .auth-group { margin-bottom: 15px; text-align: left; }
+        .auth-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #666; font-weight: bold; }
+        .auth-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; }
+        .auth-btn { width: 100%; padding: 10px; background: #3498db; color: #fff; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; font-weight: bold; margin-top: 10px; transition: background 0.2s; }
+        .auth-btn:hover { background: #2980b9; }
+        .switch-auth { margin-top: 15px; font-size: 0.85rem; color: #666; cursor: pointer; }
+        .switch-auth span { color: #3498db; font-weight: bold; }
+        .switch-auth span:hover { text-decoration: underline; }
+        .error-msg { color: #e74c3c; font-size: 0.85rem; margin-top: 10px; display: none; }
+
+        /* 主應用程式容器 */
+        .container { max-width: 1000px; width: 100%; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: none; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header h2 { font-size: 1.5rem; color: #2c3e50; }
+        .header-actions { display: flex; gap: 10px; align-items: center; }
+        .btn { background: #3498db; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: background 0.2s; }
+        .btn:hover { background: #2980b9; }
+        .btn-success { background: #27ae60; }
+        .btn-success:hover { background: #219653; }
+        .btn-danger { background: #e74c3c; }
+        .btn-danger:hover { background: #c0392b; }
+
+        /* 總結區塊 */
+        .summary-card { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 24px; }
+        .summary-item { background: #f8f9fa; padding: 16px; border-radius: 8px; border: 1px solid #e1e8ed; text-align: center; }
+        .summary-item .title { font-size: 0.85rem; color: #7f8c8d; margin-bottom: 6px; }
+        .summary-item .amount { font-size: 1.3rem; font-weight: bold; }
+        .summary-item.income .amount { color: #27ae60; }
+        .summary-item.expense .amount { color: #c0392b; }
+        .summary-item.balance .amount { color: #2980b9; }
+
+        /* 區間查詢 */
+        .filter-section { background: #f0f7fc; padding: 16px; border-radius: 8px; margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+        .filter-section label { font-size: 0.85rem; font-weight: bold; color: #34495e; }
+        .filter-section input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; }
+        .filter-result { margin-top: 10px; font-size: 0.9rem; font-weight: bold; color: #2c3e50; width: 100%; }
+
+        /* 月曆網格 */
+        .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; color: #7f8c8d; margin-bottom: 10px; }
+        .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 30px; }
+        
+        .day-cell {
+            background: #fafafa;
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            min-height: 100px;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .day-cell:hover { border-color: #3498db; background: #f0f7fc; }
+        .day-cell.empty { background: transparent; border: none; cursor: default; }
+        
+        .day-number { font-weight: bold; font-size: 0.95rem; color: #34495e; }
+        .day-summary { font-size: 0.75rem; margin-top: 4px; }
+        .income { color: #27ae60; }
+        .expense { color: #c0392b; }
+        .balance { font-weight: bold; color: #2980b9; }
+
+        /* 消費分析圖表區塊 */
+        .chart-section { background: #f8f9fa; border: 1px solid #e1e8ed; border-radius: 12px; padding: 20px; margin-top: 20px; }
+        .chart-section h3 { font-size: 1.1rem; color: #2c3e50; margin-bottom: 15px; border-bottom: 2px solid #e1e8ed; padding-bottom: 8px; }
+        .chart-container { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-around; gap: 20px; }
+        .chart-container canvas { max-width: 220px; max-height: 220px; }
+        .chart-legend { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; flex-grow: 1; min-width: 220px; }
+        .legend-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; background: #fff; padding: 6px 10px; border-radius: 6px; border: 1px solid #eee; }
+        .legend-color { width: 14px; height: 14px; border-radius: 3px; margin-right: 8px; display: inline-block; }
+        .legend-left { display: flex; align-items: center; }
+
+        /* 彈窗共通樣式 */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: #fff; padding: 24px; border-radius: 12px; width: 420px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
+        .modal-header { font-size: 1.2rem; font-weight: bold; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .close-btn { cursor: pointer; color: #aaa; font-size: 1.3rem; }
+        .close-btn:hover { color: #333; }
+        
+        .action-menu { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+        .action-btn { padding: 12px; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; text-align: center; transition: background 0.2s; }
+        .btn-add { background: #e8f4fd; color: #3498db; }
+        .btn-add:hover { background: #d0e8fc; }
+        .btn-view { background: #eafaf1; color: #27ae60; }
+        .btn-view:hover { background: #d4f4e2; }
+
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; margin-bottom: 4px; font-size: 0.85rem; color: #666; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; }
+        
+        /* 常用類別快選按鈕樣式 */
+        .quick-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+        .quick-tag-btn { background: #f0f2f5; border: 1px solid #dcdfe6; color: #606266; padding: 4px 10px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
+        .quick-tag-btn:hover { background: #e4e7ed; color: #333; border-color: #c0c4cc; }
+
+        .record-list { max-height: 220px; overflow-y: auto; margin-bottom: 16px; border-top: 1px solid #eee; padding-top: 8px; }
+        .record-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; padding: 8px 0; border-bottom: 1px dashed #f0f0f0; }
+        .delete-btn { color: #e74c3c; cursor: pointer; border: none; background: none; font-size: 0.85rem; padding: 4px 8px; border-radius: 4px; }
+        .delete-btn:hover { background: #fde8e8; }
+        
+        .back-link { font-size: 0.85rem; color: #3498db; cursor: pointer; margin-bottom: 12px; display: inline-block; }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<!-- 登入 / 註冊畫面 -->
+<div id="authContainer">
+    <h2 id="authTitle">會員登入</h2>
+    <div class="auth-group">
+        <label>帳號</label>
+        <input type="text" id="authUsername" placeholder="請輸入帳號">
+    </div>
+    <div class="auth-group">
+        <label>密碼</label>
+        <input type="password" id="authPassword" placeholder="請輸入密碼">
+    </div>
+    <button class="auth-btn" id="authSubmitBtn" onclick="handleAuth()">登入</button>
+    <div class="error-msg" id="authError"></div>
+    <div class="switch-auth" id="switchAuthText" onclick="toggleAuthMode()">
+        還沒有帳號？點此 <span>註冊新帳號</span>
+    </div>
+</div>
+
+<!-- 記帳主程式畫面 -->
+<div class="container" id="mainAppContainer">
+    <div class="header">
+        <button class="btn" onclick="changeMonth(-1)">◀ 上個月</button>
+        <h2 id="monthYearDisplay">2026年 8月</h2>
+        <div class="header-actions">
+            <span id="welcomeUser" style="font-size: 0.9rem; font-weight: bold; color: #555;"></span>
+            <button class="btn btn-success" onclick="openExportModal()">📥 匯出</button>
+            <button class="btn btn-danger" onclick="logout()">登出</button>
+            <button class="btn" onclick="changeMonth(1)">下個月 ▶</button>
+        </div>
+    </div>
+
+    <div class="summary-card">
+        <div class="summary-item income">
+            <div class="title">本月總收入</div>
+            <div class="amount" id="monthTotalIncome">0</div>
+        </div>
+        <div class="summary-item expense">
+            <div class="title">本月總支出</div>
+            <div class="amount" id="monthTotalExpense">0</div>
+        </div>
+        <div class="summary-item balance">
+            <div class="title">本月結餘</div>
+            <div class="amount" id="monthTotalBalance">0</div>
+        </div>
+    </div>
+
+    <div class="filter-section">
+        <div>
+            <label>開始日期：</label>
+            <input type="date" id="filterStartDate" onchange="calculateCustomRange()">
+        </div>
+        <div>
+            <label>結束日期：</label>
+            <input type="date" id="filterEndDate" onchange="calculateCustomRange()">
+        </div>
+        <button class="btn" onclick="resetFilter()" style="background: #95a5a6; padding: 6px 12px; font-size: 0.8rem;">清除</button>
+        <div class="filter-result" id="filterResultText">請選擇區間以查看統計結果</div>
+    </div>
+
+    <div class="weekdays">
+        <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+    </div>
+
+    <div class="days" id="calendarDays"></div>
+
+    <!-- 本月消費分析圓餅圖區塊 -->
+    <div class="chart-section">
+        <h3>📊 本月各類別消費分析</h3>
+        <div class="chart-container">
+            <canvas id="expensePieChart" width="200" height="200"></canvas>
+            <div class="chart-legend" id="chartLegend">
+                <!-- 圖表說明清單由 JS 動態生成 -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 互動彈窗 (記帳/檢視) -->
+<div class="modal" id="recordModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span id="modalDateTitle">選擇日期</span>
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+        </div>
+
+        <div id="actionMenuView" class="action-menu" style="display: none;">
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 4px;">請選擇您要進行的操作：</p>
+            <button class="action-btn btn-add" onclick="switchModalView('add')">＋ 新增收支紀錄</button>
+            <button class="action-btn btn-view" onclick="switchModalView('view')">📋 查看當日消費明細</button>
+        </div>
+
+        <div id="addView" style="display: none;">
+            <span class="back-link" onclick="switchModalView('menu')">❮ 返回選單</span>
+            <form id="recordForm" onsubmit="addRecord(event)">
+                <div class="form-group">
+                    <label>類型</label>
+                    <select id="type">
+                        <option value="expense">支出</option>
+                        <option value="income">收入</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>金額</label>
+                    <input type="number" id="amount" required placeholder="請輸入金額">
+                </div>
+                <div class="form-group">
+                    <label>類別</label>
+                    <input type="text" id="category" placeholder="例如：伙食、交通、薪資" required>
+                    <!-- 常用類別快選按鈕 -->
+                    <div class="quick-tags">
+                        <button type="button" class="quick-tag-btn" onclick="setCategory('早餐')">早餐</button>
+                        <button type="button" class="quick-tag-btn" onclick="setCategory('午餐')">午餐</button>
+                        <button type="button" class="quick-tag-btn" onclick="setCategory('晚餐')">晚餐</button>
+                        <button type="button" class="quick-tag-btn" onclick="setCategory('飲料')">飲料</button>
+                        <button type="button" class="quick-tag-btn" onclick="setCategory('交通')">交通</button>
+                        <button type="button" class="quick-tag-btn" onclick="setCategory('娛樂')">娛樂</button>
+                        <button type="button" class="quick-tag-btn" onclick="setCategory('購物')">購物</button>
+                        <button type="button" class="quick-tag-btn" onclick="setCategory('薪資')">薪資</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>備註</label>
+                    <input type="text" id="note" placeholder="例如：買午餐">
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">確認新增</button>
+            </form>
+        </div>
+
+        <div id="viewDetailView" style="display: none;">
+            <span class="back-link" onclick="switchModalView('menu')">❮ 返回選單</span>
+            <div class="record-list" id="recordList"></div>
+        </div>
+
+    </div>
+</div>
+
+<!-- 匯出範圍選擇彈窗 -->
+<div class="modal" id="exportModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>📊 選擇匯出範圍</span>
+            <span class="close-btn" onclick="closeExportModal()">&times;</span>
+        </div>
+        <div class="form-group">
+            <label>匯出模式</label>
+            <select id="exportMode" onchange="toggleExportInputs()">
+                <option value="all">全部歷史資料</option>
+                <option value="month">指定月份 (預設當月)</option>
+                <option value="custom">自訂日期區間</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="exportMonthGroup" style="display: none;">
+            <label>選擇月份</label>
+            <input type="month" id="exportMonthInput">
+        </div>
+
+        <div id="exportCustomGroup" style="display: none;">
+            <div class="form-group">
+                <label>開始日期</label>
+                <input type="date" id="exportStartDate">
+            </div>
+            <div class="form-group">
+                <label>結束日期</label>
+                <input type="date" id="exportEndDate">
+            </div>
+        </div>
+
+        <button class="btn btn-success" style="width: 100%; margin-top: 10px;" onclick="executeExport()">確認匯出 Excel</button>
+    </div>
+</div>
+
+<script>
+    let isRegisterMode = false;
+    let currentUser = localStorage.getItem('current_logged_user') || null;
+    let currentDate = new Date();
+    let selectedDateStr = '';
+    let db = {};
+
+    // 圓餅圖專用色彩盤
+    const chartColors = [
+        '#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', 
+        '#e67e22', '#1abc9c', '#34495e', '#e84393', '#00b894'
+    ];
+
+    window.onload = function() {
+        if (currentUser) {
+            loadUserData();
+            showApp();
+        }
+    };
+
+    function toggleAuthMode() {
+        isRegisterMode = !isRegisterMode;
+        document.getElementById('authTitle').innerText = isRegisterMode ? '註冊新帳號' : '會員登入';
+        document.getElementById('authSubmitBtn').innerText = isRegisterMode ? '註冊並登入' : '登入';
+        document.getElementById('switchAuthText').innerHTML = isRegisterMode 
+            ? '已經有帳號了？點此 <span>登入會員</span>' 
+            : '還沒有帳號？點此 <span>註冊新帳號</span>';
+        document.getElementById('authError').style.display = 'none';
+    }
+
+    function handleAuth() {
+        const username = document.getElementById('authUsername').value.trim();
+        const password = document.getElementById('authPassword').value.trim();
+        const errorElem = document.getElementById('authError');
+
+        if (!username || !password) {
+            errorElem.innerText = '帳號與密碼不能為空！';
+            errorElem.style.display = 'block';
+            return;
+        }
+
+        let users = JSON.parse(localStorage.getItem('app_users')) || {};
+
+        if (isRegisterMode) {
+            if (users[username]) {
+                errorElem.innerText = '此帳號已經被註冊過了！';
+                errorElem.style.display = 'block';
+                return;
+            }
+            users[username] = password;
+            localStorage.setItem('app_users', JSON.stringify(users));
+            alert('註冊成功！已自動幫您登入。');
+        } else {
+            if (!users[username] || users[username] !== password) {
+                errorElem.innerText = '帳號或密碼錯誤！';
+                errorElem.style.display = 'block';
+                return;
+            }
+        }
+
+        currentUser = username;
+        localStorage.setItem('current_logged_user', currentUser);
+        loadUserData();
+        showApp();
+    }
+
+    function logout() {
+        localStorage.removeItem('current_logged_user');
+        currentUser = null;
+        document.getElementById('mainAppContainer').style.display = 'none';
+        document.getElementById('authContainer').style.display = 'block';
+        document.getElementById('authUsername').value = '';
+        document.getElementById('authPassword').value = '';
+    }
+
+    function showApp() {
+        document.getElementById('authContainer').style.display = 'none';
+        document.getElementById('mainAppContainer').style.display = 'block';
+        document.getElementById('welcomeUser').innerText = `👤 ${currentUser}`;
+        initCalendar();
+    }
+
+    function loadUserData() {
+        const userDbKey = `account_calendar_${currentUser}`;
+        db = JSON.parse(localStorage.getItem(userDbKey)) || {};
+    }
+
+    function saveUserData() {
+        const userDbKey = `account_calendar_${currentUser}`;
+        localStorage.setItem(userDbKey, JSON.stringify(db));
+    }
+
+    function setCategory(categoryName) {
+        document.getElementById('category').value = categoryName;
+    }
+
+    function initCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        
+        document.getElementById('monthYearDisplay').innerText = `${year}年 ${month + 1}月`;
+
+        const firstDayIndex = new Date(year, month, 1).getDay();
+        const totalDays = new Date(year, month + 1, 0).getDate();
+        
+        const daysContainer = document.getElementById('calendarDays');
+        daysContainer.innerHTML = '';
+
+        for (let i = 0; i < firstDayIndex; i++) {
+            daysContainer.innerHTML += `<div class="day-cell empty"></div>`;
+        }
+
+        let monthIncome = 0;
+        let monthExpense = 0;
+        let categoryExpenses = {}; // 收集本月各支出類別總額
+
+        for (let day = 1; day <= totalDays; day++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            
+            let dayIncome = 0;
+            let dayExpense = 0;
+            if (db[dateStr]) {
+                db[dateStr].forEach(item => {
+                    const amt = Number(item.amount);
+                    if (item.type === 'income') {
+                        dayIncome += amt;
+                        monthIncome += amt;
+                    } else {
+                        dayExpense += amt;
+                        monthExpense += amt;
+                        // 累計各類別支出
+                        const cat = item.category || '未分類';
+                        categoryExpenses[cat] = (categoryExpenses[cat] || 0) + amt;
+                    }
+                });
+            }
+            const balance = dayIncome - dayExpense;
+
+            let summaryHTML = '';
+            if (dayIncome > 0 || dayExpense > 0) {
+                summaryHTML = `
+                    <div class="day-summary">
+                        ${dayIncome > 0 ? `<div class="income">+${dayIncome}</div>` : ''}
+                        ${dayExpense > 0 ? `<div class="expense">-${dayExpense}</div>` : ''}
+                        <div class="balance">結: ${balance}</div>
+                    </div>
+                `;
+            }
+
+            daysContainer.innerHTML += `
+                <div class="day-cell" onclick="openModal('${dateStr}')">
+                    <div class="day-number">${day}</div>
+                    ${summaryHTML}
+                </div>
+            `;
+        }
+
+        document.getElementById('monthTotalIncome').innerText = `+${monthIncome}`;
+        document.getElementById('monthTotalExpense').innerText = `-${monthExpense}`;
+        const monthBalance = monthIncome - monthExpense;
+        const balanceElem = document.getElementById('monthTotalBalance');
+        balanceElem.innerText = monthBalance;
+        balanceElem.style.color = monthBalance >= 0 ? '#2980b9' : '#c0392b';
+
+        // 繪製圓餅圖與列表
+        renderExpenseChart(categoryExpenses, monthExpense);
+        calculateCustomRange();
+    }
+
+    function changeMonth(direction) {
+        currentDate.setMonth(currentDate.getMonth() + direction);
+        initCalendar();
+    }
+
+    // 繪製消費分析圓餅圖
+    function renderExpenseChart(categoryData, totalExpense) {
+        const canvas = document.getElementById('expensePieChart');
+        const ctx = canvas.getContext('2d');
+        const legendContainer = document.getElementById('chartLegend');
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        legendContainer.innerHTML = '';
+
+        const categories = Object.keys(categoryData);
+
+        if (totalExpense === 0 || categories.length === 0) {
+            // 沒有支出時顯示提示
+            ctx.fillStyle = '#95a5a6';
+            ctx.font = '14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('本月尚無支出資料', canvas.width / 2, canvas.height / 2);
+
+            legendContainer.innerHTML = `<div style="text-align:center; color:#999; font-size:0.85rem; padding: 20px;">本月無消費紀錄</div>`;
+            return;
+        }
+
+        let startAngle = 0;
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = Math.min(centerX, centerY) - 10;
+
+        categories.forEach((cat, index) => {
+            const amount = categoryData[cat];
+            const sliceAngle = (amount / totalExpense) * 2 * Math.PI;
+            const color = chartColors[index % chartColors.length];
+
+            // 畫圓餅扇形
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
+            ctx.closePath();
+            ctx.fillStyle = color;
+            ctx.fill();
+
+            startAngle += sliceAngle;
+
+            // 計算佔比百分比
+            const percentage = ((amount / totalExpense) * 100).toFixed(1);
+
+            // 建立圖例項目
+            legendContainer.innerHTML += `
+                <div class="legend-item">
+                    <div class="legend-left">
+                        <span class="legend-color" style="background-color: ${color};"></span>
+                        <span>${cat}</span>
+                    </div>
+                    <div>
+                        <strong style="color: #333; margin-right: 6px;">$${amount}</strong>
+                        <span style="color: #7f8c8d; font-size: 0.8rem;">(${percentage}%)</span>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function calculateCustomRange() {
+        const startStr = document.getElementById('filterStartDate').value;
+        const endStr = document.getElementById('filterEndDate').value;
+        const resultText = document.getElementById('filterResultText');
+
+        if (!startStr || !endStr) {
+            resultText.innerText = '請完整選擇「開始日期」與「結束日期」以檢視區間統計';
+            return;
+        }
+
+        if (startStr > endStr) {
+            resultText.innerText = '開始日期不能大於結束日期！';
+            return;
+        }
+
+        let customIncome = 0;
+        let customExpense = 0;
+
+        for (const dateStr in db) {
+            if (dateStr >= startStr && dateStr <= endStr) {
+                db[dateStr].forEach(item => {
+                    if (item.type === 'income') customIncome += Number(item.amount);
+                    else customExpense += Number(item.amount);
+                });
+            }
+        }
+
+        const customBalance = customIncome - customExpense;
+        resultText.innerHTML = `📊 區間統計 (${startStr} ~ ${endStr})：
+            <span class="income">收入 +${customIncome}</span> | 
+            <span class="expense">支出 -${customExpense}</span> | 
+            <span class="balance">結餘 ${customBalance}</span>`;
+    }
+
+    function resetFilter() {
+        document.getElementById('filterStartDate').value = '';
+        document.getElementById('filterEndDate').value = '';
+        document.getElementById('filterResultText').innerText = '請選擇區間以查看統計結果';
+    }
+
+    function openModal(dateStr) {
+        selectedDateStr = dateStr;
+        document.getElementById('modalDateTitle').innerText = `${dateStr} 記帳管理`;
+        switchModalView('menu');
+        document.getElementById('recordModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('recordModal').style.display = 'none';
+        document.getElementById('recordForm').reset();
+        initCalendar(); 
+    }
+
+    function switchModalView(viewName) {
+        document.getElementById('actionMenuView').style.display = 'none';
+        document.getElementById('addView').style.display = 'none';
+        document.getElementById('viewDetailView').style.display = 'none';
+
+        if (viewName === 'menu') {
+            document.getElementById('actionMenuView').style.display = 'flex';
+        } else if (viewName === 'add') {
+            document.getElementById('addView').style.display = 'block';
+        } else if (viewName === 'view') {
+            document.getElementById('viewDetailView').style.display = 'block';
+            renderRecordList();
+        }
+    }
+
+    function renderRecordList() {
+        const listContainer = document.getElementById('recordList');
+        listContainer.innerHTML = '';
+        
+        const records = db[selectedDateStr] || [];
+        if (records.length === 0) {
+            listContainer.innerHTML = `<div style="text-align:center; color:#999; font-size:0.9rem; padding: 20px 0;">這天還沒有記帳紀錄</div>`;
+            return;
+        }
+
+        records.forEach((item, index) => {
+            const sign = item.type === 'income' ? '+' : '-';
+            const colorClass = item.type === 'income' ? 'income' : 'expense';
+            listContainer.innerHTML += `
+                <div class="record-item">
+                    <div>
+                        <strong style="color: #2c3e50;">[${item.category}]</strong> 
+                        <span style="color: #555;">${item.note || ''}</span>
+                    </div>
+                    <div>
+                        <strong class="${colorClass}" style="margin-right: 8px;">${sign}${item.amount}</strong>
+                        <button class="delete-btn" onclick="deleteRecord(${index})">刪除</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function addRecord(event) {
+        event.preventDefault();
+        const type = document.getElementById('type').value;
+        const amount = document.getElementById('amount').value;
+        const category = document.getElementById('category').value;
+        const note = document.getElementById('note').value;
+
+        if (!db[selectedDateStr]) {
+            db[selectedDateStr] = [];
+        }
+
+        db[selectedDateStr].push({ type, amount, category, note });
+        saveUserData();
+
+        document.getElementById('amount').value = '';
+        document.getElementById('category').value = '';
+        document.getElementById('note').value = '';
+
+        switchModalView('view');
+    }
+
+    function deleteRecord(index) {
+        db[selectedDateStr].splice(index, 1);
+        if (db[selectedDateStr].length === 0) {
+            delete db[selectedDateStr];
+        }
+        saveUserData();
+        renderRecordList();
+    }
+
+    function openExportModal() {
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        document.getElementById('exportMonthInput').value = `${year}-${month}`;
+        
+        document.getElementById('exportMode').value = 'all';
+        toggleExportInputs();
+        document.getElementById('exportModal').style.display = 'flex';
+    }
+
+    function closeExportModal() {
+        document.getElementById('exportModal').style.display = 'none';
+    }
+
+    function toggleExportInputs() {
+        const mode = document.getElementById('exportMode').value;
+        document.getElementById('exportMonthGroup').style.display = mode === 'month' ? 'block' : 'none';
+        document.getElementById('exportCustomGroup').style.display = mode === 'custom' ? 'block' : 'none';
+    }
+
+    function executeExport() {
+        const mode = document.getElementById('exportMode').value;
+        let startDate = '';
+        let endDate = '';
+        let fileSuffix = '全部紀錄';
+
+        if (mode === 'month') {
+            const monthVal = document.getElementById('exportMonthInput').value;
+            if (!monthVal) {
+                alert('請選擇要匯出的月份！');
+                return;
+            }
+            const [y, m] = monthVal.split('-');
+            const lastDay = new Date(y, m, 0).getDate();
+            startDate = `${y}-${m}-01`;
+            endDate = `${y}-${m}-${lastDay}`;
+            fileSuffix = `${y}年${m}月`;
+        } else if (mode === 'custom') {
+            startDate = document.getElementById('exportStartDate').value;
+            endDate = document.getElementById('exportEndDate').value;
+            if (!startDate || !endDate) {
+                alert('請完整填寫開始與結束日期！');
+                return;
+            }
+            if (startDate > endDate) {
+                alert('開始日期不能大於結束日期！');
+                return;
+            }
+            fileSuffix = `${startDate}_to_${endDate}`;
+        }
+
+        let flatData = [];
+        for (const dateStr in db) {
+            if (mode === 'all' || (dateStr >= startDate && dateStr <= endDate)) {
+                db[dateStr].forEach(item => {
+                    flatData.push({
+                        "日期": dateStr,
+                        "收支類型": item.type === 'income' ? '收入' : '支出',
+                        "金額": Number(item.amount),
+                        "類別": item.category,
+                        "備註": item.note || ''
+                    });
+                });
+            }
+        }
+
+        if (flatData.length === 0) {
+            alert('選取的範圍中沒有任何記帳資料可以匯出！');
+            return;
+        }
+
+        flatData.sort((a, b) => a.日期.localeCompare(b.日期));
+
+        const worksheet = XLSX.utils.json_to_sheet(flatData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "記帳明細");
+
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const fileName = `${currentUser}_記帳明細_${fileSuffix}.xlsx`;
+
+        XLSX.writeFile(workbook, fileName);
+        closeExportModal();
+    }
+</script>
+
+</body>
+</html>
