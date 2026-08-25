@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>無限魂斗羅：多重 Boss 與怪物版</title>
+    <title>魂斗羅：無圖純繪製版</title>
     <style>
         body {
             background-color: #111;
@@ -172,43 +172,14 @@
 </head>
 <body>
 
-    <!-- 主角與子彈圖片 -->
-    <img id="runSprite" src="player_run.png" style="display:none;" alt="run sprite">
-    <img id="shootSprite" src="player_shoot.png" style="display:none;" alt="shoot sprite">
-    <img id="shootBulletImg" src="SHOOT1.PNG" style="display:none;" alt="shoot bullet">
-
-    <!-- 怪物 1 ~ 10 圖片預先載入 -->
-    <img id="monster1" src="MONSTER1.PNG" style="display:none;" alt="monster 1">
-    <img id="monster2" src="MONSTER2.PNG" style="display:none;" alt="monster 2">
-    <img id="monster3" src="MONSTER3.PNG" style="display:none;" alt="monster 3">
-    <img id="monster4" src="MONSTER4.PNG" style="display:none;" alt="monster 4">
-    <img id="monster5" src="MONSTER5.PNG" style="display:none;" alt="monster 5">
-    <img id="monster6" src="MONSTER6.PNG" style="display:none;" alt="monster 6">
-    <img id="monster7" src="MONSTER7.PNG" style="display:none;" alt="monster 7">
-    <img id="monster8" src="MONSTER8.PNG" style="display:none;" alt="monster 8">
-    <img id="monster9" src="MONSTER9.PNG" style="display:none;" alt="monster 9">
-    <img id="monster10" src="MONSTER10.PNG" style="display:none;" alt="monster 10">
-
-    <!-- BOSS 1 ~ 10 圖片預先載入 -->
-    <img id="boss1" src="BOSS1.png" style="display:none;" alt="boss 1">
-    <img id="boss2" src="BOSS2.png" style="display:none;" alt="boss 2">
-    <img id="boss3" src="BOSS3.png" style="display:none;" alt="boss 3">
-    <img id="boss4" src="BOSS4.png" style="display:none;" alt="boss 4">
-    <img id="boss5" src="BOSS5.png" style="display:none;" alt="boss 5">
-    <img id="boss6" src="BOSS6.png" style="display:none;" alt="boss 6">
-    <img id="boss7" src="BOSS7.png" style="display:none;" alt="boss 7">
-    <img id="boss8" src="BOSS8.png" style="display:none;" alt="boss 8">
-    <img id="boss9" src="BOSS9.png" style="display:none;" alt="boss 9">
-    <img id="boss10" src="BOSS10.png" style="display:none;" alt="boss 10">
-
-    <h1>👻 魂斗羅：多重 Boss 與怪物版</h1>
+    <h1>👻 魂斗羅：無敵雙人英雄版</h1>
     
     <div id="scoreboard">
         <div>分數: <span id="score">0</span></div>
         <div>生命: <span id="lives">10</span></div>
         <div>護盾: <span id="shield" style="color: #00E5FF;">0/3</span></div>
         <div>關卡: <span id="wave" style="color: #4CAF50;">第 1 波</span></div>
-        <div>武器: <span id="weapon" style="color: #FFEB3B;">普通槍 (Lv.1)</span></div>
+        <div>武器: <span id="weapon" style="color: #FFEB3B;">普彈 Lv.1</span></div>
         <div>無敵CD: <span id="invincibleCd" style="color: #00E5FF;">就緒 (C)</span></div>
     </div>
 
@@ -222,7 +193,7 @@
     </div>
 
     <div class="key-hints">
-        💡 <b>操作說明：</b> 移動 <span>⬅️ ➡️</span> | 瞄準 <span>⬆️</span> | 二段跳 <span>X / 空白</span> | 點擊射擊 <span>Z</span> | 無敵 <span>C</span> | 技能 <span>1/2/3</span> | 重啟 <span>R</span>
+        💡 <b>操作說明：</b> 移動 <span>⬅️ ➡️</span> | 瞄準 <span>⬆️</span> | 二段跳 <span>X / 空白</span> | 射擊 <span>Z</span> | 無敵 <span>C</span> | 選擇技能 <span>1/2/3 / 觸控點擊</span> | 重啟 <span>R</span>
     </div>
 
     <div class="controls">
@@ -252,20 +223,6 @@
         const modalTitle = document.getElementById('modalTitle');
         const skillOptionsContainer = document.getElementById('skillOptionsContainer');
 
-        const runSpriteImg = document.getElementById('runSprite');
-        const shootSpriteImg = document.getElementById('shootSprite');
-        const shootBulletImg = document.getElementById('shootBulletImg');
-
-        const monsterImages = [];
-        for (let i = 1; i <= 10; i++) {
-            monsterImages.push(document.getElementById(`monster${i}`));
-        }
-
-        const bossImages = [];
-        for (let i = 1; i <= 10; i++) {
-            bossImages.push(document.getElementById(`boss${i}`));
-        }
-
         let score = 0;
         let lives = 10;
         let shieldCharges = 0;
@@ -292,16 +249,14 @@
         let player = {
             x: 50,
             y: 240,
-            width: 52,
-            height: 52,
+            width: 40,
+            height: 50,
             vx: 0,
             vy: 0,
             speed: 4,
             jumpPower: -11.5,
             isJumping: false,
             canDoubleJump: false,
-            isShooting: false,
-            shootAnimTimer: 0,
             facing: 1,
             weapons: {
                 normal: 1,  
@@ -309,10 +264,7 @@
                 laser: 0,
                 heal: 0     
             },
-            shootCooldown: 0,
-            animTimer: 0,
-            runFrame: 0,
-            shootFrame: 0
+            shootCooldown: 0
         };
 
         let gravity = 0.55;
@@ -360,13 +312,10 @@
             }
         });
 
-        window.addEventListener('keyup', (e) => {
-            keys[e.code] = false;
-        });
+        window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
         function triggerJump() {
             if (isGameOver || isPausedForSkill || !isGameStarted) return;
-
             if (!player.isJumping) {
                 player.vy = player.jumpPower;
                 player.isJumping = true;
@@ -406,10 +355,6 @@
             if (player.shootCooldown > 0) return;
 
             player.shootCooldown = 6;
-            player.isShooting = true;
-            player.shootFrame = 0;
-            player.shootAnimTimer = 0;
-
             let aimX = player.facing;
             let aimY = 0;
 
@@ -423,7 +368,7 @@
                 for (let i = 0; i < count; i++) {
                     bullets.push({
                         x: aimY < 0 ? player.x + player.width / 2 - 3 + (i * 6) : (player.facing > 0 ? player.x + player.width : player.x - 12),
-                        y: (aimY < 0 ? player.y - 10 : player.y + 20) + (i * 5),
+                        y: (aimY < 0 ? player.y - 10 : player.y + 18) + (i * 5),
                         vx: aimX * 10,
                         vy: aimY * 10,
                         width: 12,
@@ -440,7 +385,7 @@
                     let spreadFactor = (i - (totalBullets - 1) / 2) * spreadStep;
                     bullets.push({
                         x: player.facing > 0 ? player.x + player.width : player.x - 12,
-                        y: player.y + 20,
+                        y: player.y + 18,
                         vx: player.facing * 9,
                         vy: spreadFactor,
                         width: 12,
@@ -455,7 +400,7 @@
                 for (let i = 0; i < count; i++) {
                     bullets.push({
                         x: aimY < 0 ? player.x + player.width / 2 - 2 + (i * 8) : (player.facing > 0 ? player.x + player.width : player.x - 15),
-                        y: (aimY < 0 ? player.y - 15 : player.y + 20) + (i * 6),
+                        y: (aimY < 0 ? player.y - 15 : player.y + 18) + (i * 6),
                         vx: aimX * 15,
                         vy: aimY * 15,
                         width: 18,
@@ -485,41 +430,27 @@
             initialPick = isInitial;
             skillOptionsContainer.innerHTML = '';
             
-            if (isInitial) {
-                modalTitle.textContent = "🎁 遊戲即將開始！請選擇您的開局初始技能 (按 1, 2, 3)：";
-            } else {
-                modalTitle.textContent = "🎁 獲得補給箱！請選擇技能 (按 1, 2, 3)：";
-            }
+            modalTitle.textContent = isInitial ? "🎁 選擇開局初始技能：" : "🎁 獲得補給箱！請選擇技能：";
             
             let currentHealChance = 1 + (player.weapons.heal * 0.5);
-
             const allSkills = [
                 { 
                     id: 'scatter', 
                     name: `🔥 散彈強化 (Lv.${Math.min(10, player.weapons.scatter + 1)})`, 
                     desc: '黃色子彈數量 +1（最高 10 階）', 
-                    action: () => { 
-                        if (player.weapons.scatter < 10) player.weapons.scatter++;
-                        updateWeaponDisplay();
-                    }
+                    action: () => { if (player.weapons.scatter < 10) player.weapons.scatter++; updateWeaponDisplay(); }
                 },
                 { 
                     id: 'laser', 
                     name: `⚡ 雷射強化 (Lv.${Math.min(10, player.weapons.laser + 1)})`, 
                     desc: '雷射數量增加與智慧追蹤（最高 10 階）', 
-                    action: () => { 
-                        if (player.weapons.laser < 10) player.weapons.laser++;
-                        updateWeaponDisplay();
-                    }
+                    action: () => { if (player.weapons.laser < 10) player.weapons.laser++; updateWeaponDisplay(); }
                 },
                 { 
                     id: 'shield', 
                     name: '🛡️ 能量護盾', 
                     desc: '充能防護罩（可承受 3 發子彈或撞擊）', 
-                    action: () => { 
-                        shieldCharges = 3;
-                        shieldElement.textContent = `${shieldCharges}/3`;
-                    }
+                    action: () => { shieldCharges = 3; shieldElement.textContent = `${shieldCharges}/3`; }
                 },
                 {
                     id: 'heal',
@@ -527,11 +458,6 @@
                     desc: `觸發機率升至 ${currentHealChance.toFixed(1)}% 獲得 +1 血量`,
                     action: () => {
                         player.weapons.heal++;
-                        let chance = 1 + (player.weapons.heal - 1) * 0.5;
-                        let roll = Math.random() * 100;
-                        if (roll < chance) {
-                            lives += 1; 
-                        }
                         lives += 1; 
                         livesElement.textContent = lives;
                         updateWeaponDisplay();
@@ -540,7 +466,6 @@
             ];
 
             currentSkillChoices = [...allSkills].sort(() => Math.random() - 0.5).slice(0, 3);
-
             currentSkillChoices.forEach((skill, index) => {
                 const card = document.createElement('div');
                 card.className = 'skill-card';
@@ -556,14 +481,7 @@
             currentSkillChoices[index].action();
             skillModal.style.display = 'none';
             isPausedForSkill = false;
-
-            if (initialPick) {
-                startCountdown();
-            }
-        }
-
-        function startCountdown() {
-            countdownTimer = 180; 
+            if (initialPick) countdownTimer = 180;
         }
 
         let enemySpawnTimer = 0;
@@ -590,7 +508,6 @@
             let spawnInterval = Math.max(20, 45 - (wave * 3));
             if (enemySpawnTimer > spawnInterval && enemies.length < 8) {
                 let isSky = Math.random() < 0.33; 
-                
                 let baseSpeed = 2.5 + (wave * 0.2);
                 let colorType = 'green';
                 let hp = 1;
@@ -604,14 +521,12 @@
                     } else if (randColor < 0.66) {
                         colorType = 'yellow';
                         hp = 2; 
-                    } else {
-                        colorType = 'green';
                     }
                 }
 
                 enemies.push({
                     x: canvas.width,
-                    y: isSky ? 15 : groundY - 38, 
+                    y: isSky ? 20 : groundY - 38, 
                     width: 32,
                     height: 38,
                     vx: -speed,
@@ -641,9 +556,7 @@
 
             if (countdownTimer > 0) {
                 countdownTimer--;
-                if (countdownTimer === 0) {
-                    isGameStarted = true;
-                }
+                if (countdownTimer === 0) isGameStarted = true;
                 return;
             }
 
@@ -692,28 +605,6 @@
             if (player.x < 0) player.x = 0;
             if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
 
-            if (player.vx !== 0 && !player.isJumping) {
-                player.animTimer++;
-                if (player.animTimer > 5) {
-                    player.runFrame = (player.runFrame + 1) % 12;
-                    player.animTimer = 0;
-                }
-            } else {
-                player.runFrame = 0;
-            }
-
-            if (player.isShooting) {
-                player.shootAnimTimer++;
-                if (player.shootAnimTimer > 4) {
-                    player.shootFrame++;
-                    player.shootAnimTimer = 0;
-                    if (player.shootFrame >= 8) {
-                        player.isShooting = false;
-                        player.shootFrame = 0;
-                    }
-                }
-            }
-
             for (let i = bullets.length - 1; i >= 0; i--) {
                 let b = bullets[i];
                 if (b.homing) {
@@ -721,16 +612,11 @@
                     let minDist = b.homingRange;
                     enemies.forEach(e => {
                         let dist = Math.hypot((e.x + e.width/2) - b.x, (e.y + e.height/2) - b.y);
-                        if (dist < minDist) {
-                            minDist = dist;
-                            target = e;
-                        }
+                        if (dist < minDist) { minDist = dist; target = e; }
                     });
                     if (boss) {
                         let dist = Math.hypot((boss.x + boss.width/2) - b.x, (boss.y + boss.height/2) - b.y);
-                        if (dist < minDist) {
-                            target = boss;
-                        }
+                        if (dist < minDist) target = boss;
                     }
 
                     if (target) {
@@ -791,8 +677,8 @@
                             y: enemies[i].y + enemies[i].height,
                             vx: -1.5,
                             vy: 3.5,
-                            width: 14,
-                            height: 14
+                            width: 12,
+                            height: 12
                         });
                         enemies[i].bombTimer = 0;
                     }
@@ -811,19 +697,12 @@
 
                         if (enemies[i].hp <= 0) {
                             let deadX = enemies[i].x;
-                            let deadY = enemies[i].y;
                             enemies.splice(i, 1);
-
                             score += 100;
                             scoreElement.textContent = score;
 
-                            if (!powerUp && Math.random() < 0.10) {
-                                powerUp = {
-                                    x: deadX,
-                                    y: groundY - 26, 
-                                    width: 26,
-                                    height: 26
-                                };
+                            if (!powerUp && Math.random() < 0.12) {
+                                powerUp = { x: deadX, y: groundY - 26, width: 26, height: 26 };
                             }
                         }
                         break;
@@ -841,16 +720,12 @@
                     takeDamage();
                 }
 
-                if (enemies[i] && enemies[i].x < -30) {
-                    enemies.splice(i, 1);
-                }
+                if (enemies[i] && enemies[i].x < -30) enemies.splice(i, 1);
             }
 
             if (boss) {
                 boss.y += boss.vy;
-                if (boss.y <= 80 || boss.y >= groundY - boss.height) {
-                    boss.vy *= -1;
-                }
+                if (boss.y <= 60 || boss.y >= groundY - boss.height) boss.vy *= -1;
 
                 boss.shootTimer++;
                 let shootInterval = Math.max(25, 50 - (wave * 3));
@@ -906,7 +781,7 @@
         function render() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 繪製雲朵背景
+            // 繪製背景與雲朵
             ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
             clouds.forEach(c => {
                 ctx.beginPath();
@@ -922,30 +797,108 @@
             ctx.fillStyle = '#1e3c1a';
             ctx.fillRect(0, groundY + 10, canvas.width, canvas.height - groundY - 10);
 
-            // 繪製玩家無敵特效/護盾特效
+            // 護盾與無敵特效
             if (invincibleTimer > 0) {
                 ctx.strokeStyle = '#00E5FF';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.arc(player.x + player.width / 2, player.y + player.height / 2, player.width * 0.7, 0, Math.PI * 2);
+                ctx.arc(player.x + player.width / 2, player.y + player.height / 2, player.width * 0.8, 0, Math.PI * 2);
                 ctx.stroke();
             } else if (shieldCharges > 0) {
                 ctx.strokeStyle = '#FFD700';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 2.5;
                 ctx.beginPath();
-                ctx.arc(player.x + player.width / 2, player.y + player.height / 2, player.width * 0.65, 0, Math.PI * 2);
+                ctx.arc(player.x + player.width / 2, player.y + player.height / 2, player.width * 0.75, 0, Math.PI * 2);
                 ctx.stroke();
             }
 
-            // 繪製玩家
+            // 繪製主角 (純 Canvas 繪製：魂斗羅戰士)
             ctx.save();
-            ctx.fillStyle = '#3388ff';
-            ctx.fillRect(player.x, player.y, player.width, player.height);
-            ctx.fillStyle = '#fff';
-            // 眼部朝向視覺指引
-            let eyeX = player.facing > 0 ? player.x + player.width - 12 : player.x + 4;
-            ctx.fillRect(eyeX, player.y + 10, 8, 8);
+            let px = player.x;
+            let py = player.y;
+
+            if (invincibleTimer === 0 || Math.floor(invincibleTimer / 4) % 2 === 0) {
+                // 身體/迷彩衣服
+                ctx.fillStyle = '#3B5998';
+                ctx.fillRect(px + 10, py + 18, 20, 20);
+
+                // 肌肉手臂
+                ctx.fillStyle = '#FFCC80';
+                ctx.fillRect(px + 4, py + 20, 8, 14);
+                ctx.fillRect(px + 28, py + 20, 8, 14);
+
+                // 頭部
+                ctx.fillStyle = '#FFCC80';
+                ctx.beginPath();
+                ctx.arc(px + 20, py + 12, 9, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 經典魂斗羅紅頭巾
+                ctx.fillStyle = '#FF1744';
+                ctx.fillRect(px + 10, py + 5, 20, 5);
+                // 飄逸飄帶
+                if (player.facing > 0) {
+                    ctx.fillRect(px + 6, py + 7, 6, 3);
+                } else {
+                    ctx.fillRect(px + 28, py + 7, 6, 3);
+                }
+
+                // 槍枝
+                ctx.fillStyle = '#222';
+                if (player.facing > 0) {
+                    ctx.fillRect(px + 20, py + 22, 22, 6);
+                } else {
+                    ctx.fillRect(px - 2, py + 22, 22, 6);
+                }
+            }
             ctx.restore();
+
+            // 繪製怪物 (純 Canvas 繪製)
+            enemies.forEach(e => {
+                ctx.save();
+                if (e.isSky) {
+                    // 空中型外星飛艇
+                    ctx.fillStyle = '#9C27B0';
+                    ctx.beginPath();
+                    ctx.ellipse(e.x + 16, e.y + 15, 16, 10, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#00E5FF';
+                    ctx.beginPath();
+                    ctx.arc(e.x + 16, e.y + 12, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // 地面異形士兵
+                    ctx.fillStyle = e.colorType === 'red' ? '#FF1744' : (e.colorType === 'yellow' ? '#FFEA00' : '#4CAF50');
+                    ctx.fillRect(e.x + 4, e.y + 8, 24, 26);
+                    // 異形眼睛
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(e.x + (e.vx < 0 ? 8 : 18), e.y + 12, 6, 6);
+                }
+                ctx.restore();
+            });
+
+            // 繪製 Boss (純 Canvas 繪製巨型怪)
+            if (boss) {
+                ctx.save();
+                ctx.fillStyle = '#7B1FA2';
+                ctx.fillRect(boss.x, boss.y, boss.width, boss.height);
+                ctx.fillStyle = '#FF1744';
+                ctx.fillRect(boss.x + 10, boss.y + 15, 20, 15);
+                ctx.fillRect(boss.x + 40, boss.y + 15, 20, 15);
+                ctx.restore();
+
+                // Boss 血條
+                let barW = 60;
+                let barH = 8;
+                let barX = boss.x + (boss.width - barW) / 2;
+                let barY = boss.y - 15;
+                ctx.fillStyle = '#333';
+                ctx.fillRect(barX, barY, barW, barH);
+                ctx.fillStyle = '#FF1744';
+                ctx.fillRect(barX, barY, barW * (boss.hp / boss.maxHp), barH);
+                ctx.strokeStyle = '#fff';
+                ctx.strokeRect(barX, barY, barW, barH);
+            }
 
             // 繪製玩家子彈
             bullets.forEach(b => {
@@ -953,12 +906,6 @@
                 else if (b.type === 'laser') ctx.fillStyle = '#00E5FF';
                 else ctx.fillStyle = '#FF5252';
                 ctx.fillRect(b.x, b.y, b.width, b.height);
-            });
-
-            // 繪製怪物
-            enemies.forEach(e => {
-                ctx.fillStyle = e.colorType === 'red' ? '#FF1744' : (e.colorType === 'yellow' ? '#FFEA00' : '#00E676');
-                ctx.fillRect(e.x, e.y, e.width, e.height);
             });
 
             // 繪製敵方子彈
@@ -976,45 +923,21 @@
                 ctx.fillText('?', powerUp.x + 8, powerUp.y + 20);
             }
 
-            // 繪製 Boss 及血條
-            if (boss) {
-                let bossImgIdx = (wave - 1) % 10;
-                let bImg = bossImages[bossImgIdx];
-                if (bImg && bImg.complete && bImg.naturalWidth > 0) {
-                    ctx.drawImage(bImg, boss.x, boss.y, boss.width, boss.height);
-                } else {
-                    ctx.fillStyle = '#D500F9';
-                    ctx.fillRect(boss.x, boss.y, boss.width, boss.height);
-                }
-
-                // Boss 血條
-                let barW = 60;
-                let barH = 8;
-                let barX = boss.x + (boss.width - barW) / 2;
-                let barY = boss.y - 15;
-                ctx.fillStyle = '#333';
-                ctx.fillRect(barX, barY, barW, barH);
-                ctx.fillStyle = '#FF1744';
-                ctx.fillRect(barX, barY, barW * (boss.hp / boss.maxHp), barH);
-                ctx.strokeStyle = '#fff';
-                ctx.strokeRect(barX, barY, barW, barH);
-            }
-
-            // 倒數計時繪製
+            // 倒數計時畫面
             if (countdownTimer > 0) {
                 ctx.fillStyle = 'rgba(0,0,0,0.5)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 48px sans-serif';
+                ctx.font = 'bold 40px sans-serif';
                 ctx.textAlign = 'center';
                 let sec = Math.ceil(countdownTimer / 60);
-                ctx.fillText(`準備發射！ ${sec}`, canvas.width / 2, canvas.height / 2);
+                ctx.fillText(`準備戰鬥！ ${sec}`, canvas.width / 2, canvas.height / 2);
                 ctx.textAlign = 'start';
             }
 
             // Game Over 畫面
             if (isGameOver) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.fillStyle = '#FF1744';
                 ctx.font = 'bold 36px sans-serif';
@@ -1022,7 +945,7 @@
                 ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 20);
                 ctx.fillStyle = '#fff';
                 ctx.font = '20px sans-serif';
-                ctx.fillText(`最終分數: ${score} | 波次: ${wave}`, canvas.width / 2, canvas.height / 2 + 20);
+                ctx.fillText(`最終分數: ${score} | 關卡: ${wave}`, canvas.width / 2, canvas.height / 2 + 20);
                 ctx.font = '16px sans-serif';
                 ctx.fillStyle = '#FFD700';
                 ctx.fillText('按 R 鍵重新開始遊戲', canvas.width / 2, canvas.height / 2 + 55);
@@ -1064,9 +987,7 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // 初始化遊戲開局技能選擇
         openSkillChoices(true);
-        // 啟動主循環
         gameLoop();
     </script>
 </body>
