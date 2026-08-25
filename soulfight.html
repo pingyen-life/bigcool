@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>無限魂斗羅：多重 Boss 與怪物版 (手機優化版)</title>
+    <title>無限魂斗羅：多重 Boss 版 (跨平台自動偵測版)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -30,20 +30,21 @@
 
         h1 {
             margin: 2px 0;
-            font-size: 1rem;
+            font-size: 1.1rem;
             color: #ff4444;
             letter-spacing: 1px;
             text-align: center;
         }
 
         #scoreboard {
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             margin-bottom: 2px;
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 8px;
+            gap: 10px;
             width: 100%;
+            max-width: 650px;
             background: rgba(0,0,0,0.5);
             padding: 4px;
             border-radius: 6px;
@@ -56,7 +57,7 @@
             align-items: center;
             justify-content: center;
             width: 100%;
-            max-height: 55vh;
+            max-height: 60vh;
         }
 
         canvas {
@@ -70,6 +71,62 @@
             display: block;
         }
 
+        /* 模式選擇視窗 */
+        #modeModal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            padding: 15px;
+        }
+
+        #modeModal h2 {
+            color: #FFD700;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+
+        #modeModal p {
+            color: #aaa;
+            font-size: 0.85rem;
+            margin-bottom: 15px;
+        }
+
+        .mode-btn-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .mode-card {
+            background: #222;
+            border: 2px solid #444;
+            padding: 12px 18px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .mode-card.recommended {
+            border-color: #FFD700;
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+        }
+
+        .mode-card h3 {
+            margin: 0 0 5px 0;
+            color: #fff;
+            font-size: 0.95rem;
+        }
+
+        /* 技能選擇視窗 */
         #skillModal {
             position: absolute;
             top: 0;
@@ -122,9 +179,26 @@
             color: #ccc;
         }
 
-        /* 手機版觸控介面配置 */
-        .controls-container {
+        /* 控制 UI (電腦 / 手機) */
+        .key-hints {
+            background-color: #222;
+            border: 1px solid #444;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #aaa;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .key-hints span {
+            color: #FFEB3B;
+            font-weight: bold;
+        }
+
+        .mobile-controls {
             width: 100%;
+            max-width: 650px;
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
@@ -132,7 +206,6 @@
             touch-action: none;
         }
 
-        /* D-Pad 方向搖桿 */
         .dpad {
             position: relative;
             width: 120px;
@@ -157,11 +230,9 @@
         }
 
         .dpad-up { top: 0; left: 40px; width: 40px; height: 40px; }
-        .dpad-down { bottom: 0; left: 40px; width: 40px; height: 40px; }
         .dpad-left { top: 40px; left: 0; width: 40px; height: 40px; }
         .dpad-right { top: 40px; right: 0; width: 40px; height: 40px; }
 
-        /* 右側動作按鈕 */
         .action-pad {
             position: relative;
             width: 160px;
@@ -220,7 +291,7 @@
     <img id="shootSprite" src="player_shoot.png" style="display:none;" alt="shoot sprite">
     <img id="shootBulletImg" src="SHOOT1.PNG" style="display:none;" alt="shoot bullet">
 
-    <!-- 怪物 1 ~ 10 圖片預先載入 -->
+    <!-- 怪物 1 ~ 10 圖片 -->
     <img id="monster1" src="MONSTER1.PNG" style="display:none;" alt="monster 1">
     <img id="monster2" src="MONSTER2.PNG" style="display:none;" alt="monster 2">
     <img id="monster3" src="MONSTER3.PNG" style="display:none;" alt="monster 3">
@@ -232,7 +303,7 @@
     <img id="monster9" src="MONSTER9.PNG" style="display:none;" alt="monster 9">
     <img id="monster10" src="MONSTER10.PNG" style="display:none;" alt="monster 10">
 
-    <!-- BOSS 1 ~ 10 圖片預先載入 -->
+    <!-- BOSS 1 ~ 10 圖片 -->
     <img id="boss1" src="BOSS1.png" style="display:none;" alt="boss 1">
     <img id="boss2" src="BOSS2.png" style="display:none;" alt="boss 2">
     <img id="boss3" src="BOSS3.png" style="display:none;" alt="boss 3">
@@ -247,25 +318,47 @@
     <h1>👻 魂斗羅：多重 Boss 版</h1>
     
     <div id="scoreboard">
-        <div>分數: <span id="score">0</span></div>
-        <div>生命: <span id="lives">10</span></div>
-        <div>護盾: <span id="shield" style="color: #00E5FF;">0/3</span></div>
-        <div>關卡: <span id="wave" style="color: #4CAF50;">第 1 波</span></div>
+        <div>分數: <span id="score">0</span>[cite: 1]</div>
+        <div>生命: <span id="lives">10</span>[cite: 1]</div>
+        <div>護盾: <span id="shield" style="color: #00E5FF;">0/3</span>[cite: 1]</div>
+        <div>關卡: <span id="wave" style="color: #4CAF50;">第 1 波</span>[cite: 1]</div>
         <div>武器: <span id="weapon" style="color: #FFEB3B;">普彈 Lv.1</span></div>
         <div>無敵CD: <span id="invincibleCd" style="color: #00E5FF;">就緒</span></div>
     </div>
 
     <div class="game-container">
         <canvas id="gameCanvas" width="650" height="360"></canvas>
+
+        <!-- 1. 遊戲模式選擇選單 -->
+        <div id="modeModal">
+            <h2>🎮 請選擇操控模式</h2>
+            <p id="autoDetectHint">已為您自動偵測最佳模式</p>
+            <div class="mode-btn-group">
+                <div class="mode-card" id="btnPcMode" onclick="setControlMode('pc')">
+                    <h3>💻 電腦模式</h3>
+                    <p>鍵盤操控 (WASD / 箭頭)</p>
+                </div>
+                <div class="mode-card" id="btnMobileMode" onclick="setControlMode('mobile')">
+                    <h3>📱 手機模式</h3>
+                    <p>螢幕虛擬搖桿與按鈕</p>
+                </div>
+            </div>
+        </div>
         
-        <div id="skillModal">
+        <!-- 2. 技能選擇視窗 -->
+        <div id="skillModal" style="display: none;">
             <h2 id="modalTitle">🎁 請選擇技能：</h2>
             <div class="skill-options" id="skillOptionsContainer"></div>
         </div>
     </div>
 
-    <!-- 手機專用觸控控制區域 -->
-    <div class="controls-container">
+    <!-- 電腦版鍵盤說明 (動態顯示/隱藏) -->
+    <div class="key-hints" id="pcKeyHints" style="display: none;">
+        💡 <b>鍵盤操作：</b> 移動 <span>⬅️ ➡️</span> | 瞄準 <span>⬆️</span> | 跳躍 <span>X / 空白</span> | 射擊 <span>Z</span> | 無敵 <span>C</span> | 技能 <span>1/2/3</span>[cite: 1]
+    </div>
+
+    <!-- 手機版觸控按鈕 (動態顯示/隱藏) -->
+    <div class="mobile-controls" id="mobileControls" style="display: none;">
         <div class="dpad">
             <div class="dpad-btn dpad-up" id="btnUp">⬆️</div>
             <div class="dpad-btn dpad-left" id="btnLeft">⬅️</div>
@@ -279,7 +372,6 @@
     </div>
 
     <script>
-        // 禁止系統滑動與手勢放大
         document.addEventListener('gesturestart', e => e.preventDefault());
         document.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
 
@@ -292,9 +384,13 @@
         const waveElement = document.getElementById('wave');
         const weaponElement = document.getElementById('weapon');
         const invincibleCdElement = document.getElementById('invincibleCd');
+        
+        const modeModal = document.getElementById('modeModal');
         const skillModal = document.getElementById('skillModal');
         const modalTitle = document.getElementById('modalTitle');
         const skillOptionsContainer = document.getElementById('skillOptionsContainer');
+        const pcKeyHints = document.getElementById('pcKeyHints');
+        const mobileControls = document.getElementById('mobileControls');
 
         const runSpriteImg = document.getElementById('runSprite');
         const shootSpriteImg = document.getElementById('shootSprite');
@@ -310,6 +406,7 @@
             bossImages.push(document.getElementById(`boss${i}`));
         }
 
+        let gameMode = 'pc'; // 'pc' 或 'mobile'
         let score = 0;
         let lives = 10;
         let shieldCharges = 0;
@@ -347,12 +444,7 @@
             isShooting: false,
             shootAnimTimer: 0,
             facing: 1,
-            weapons: {
-                normal: 1,  
-                scatter: 0, 
-                laser: 0,
-                heal: 0     
-            },
+            weapons: { normal: 1, scatter: 0, laser: 0, heal: 0 },
             shootCooldown: 0,
             animTimer: 0,
             runFrame: 0,
@@ -367,10 +459,38 @@
         let enemies = [];
         let powerUp = null;
         let boss = null;
-
         let keys = {};
 
-        // 鍵盤操控支援
+        // --- 自動偵測載入模式 ---
+        function autoDetectDevice() {
+            const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            const isMobileWidth = window.innerWidth <= 768;
+
+            if (isTouch || isMobileWidth) {
+                document.getElementById('btnMobileMode').classList.add('recommended');
+                document.getElementById('autoDetectHint').textContent = "🔍 偵測到手機/觸控裝置，推薦使用手機模式";
+            } else {
+                document.getElementById('btnPcMode').classList.add('recommended');
+                document.getElementById('autoDetectHint').textContent = "🔍 偵測到電腦裝置，推薦使用電腦模式";
+            }
+        }
+
+        function setControlMode(mode) {
+            gameMode = mode;
+            modeModal.style.display = 'none';
+
+            if (gameMode === 'pc') {
+                pcKeyHints.style.display = 'block';
+                mobileControls.style.display = 'none';
+            } else {
+                pcKeyHints.style.display = 'none';
+                mobileControls.style.display = 'flex';
+            }
+
+            openSkillChoices(true);
+        }
+
+        // 鍵盤操控事件
         window.addEventListener('keydown', (e) => {
             if (e.repeat) return;
             keys[e.code] = true;
@@ -400,11 +520,10 @@
                 e.preventDefault();
             }
         });
-        window.addEventListener('keyup', (e) => {
-            keys[e.code] = false;
-        });
 
-        // 多點觸控高靈敏按鈕綁定
+        window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+        // 觸控按鈕綁定
         function bindTouchButton(id, keyCode) {
             const el = document.getElementById(id);
             if (!el) return;
@@ -440,7 +559,6 @@
 
         function triggerJump() {
             if (isGameOver || isPausedForSkill || !isGameStarted) return;
-
             if (!player.isJumping) {
                 player.vy = player.jumpPower;
                 player.isJumping = true;
@@ -531,10 +649,7 @@
             if (player.weapons.normal > 0) activeList.push(`普彈 Lv.${player.weapons.normal}`);
             if (player.weapons.scatter > 0) activeList.push(`散彈 Lv.${player.weapons.scatter}`);
             if (player.weapons.laser > 0) activeList.push(`雷射 Lv.${player.weapons.laser}`);
-            if (player.weapons.heal > 0) {
-                let currentChance = (1 + (player.weapons.heal - 1) * 0.5).toFixed(1);
-                activeList.push(`醫療 Lv.${player.weapons.heal}`);
-            }
+            if (player.weapons.heal > 0) activeList.push(`醫療 Lv.${player.weapons.heal}`);
             
             weaponElement.textContent = activeList.join(" | ");
         }
@@ -544,52 +659,32 @@
             initialPick = isInitial;
             skillOptionsContainer.innerHTML = '';
             
-            if (isInitial) {
-                modalTitle.textContent = "🎁 請選擇您的初始技能：";
-            } else {
-                modalTitle.textContent = "🎁 獲得補給箱！請選擇技能：";
-            }
-            
-            let currentHealChance = 1 + (player.weapons.heal * 0.5);
+            modalTitle.textContent = isInitial ? "🎁 請選擇您的初始技能：" : "🎁 獲得補給箱！請選擇技能：";
 
             const allSkills = [
                 { 
                     id: 'scatter', 
                     name: `🔥 散彈 (Lv.${Math.min(10, player.weapons.scatter + 1)})`, 
-                    desc: '子彈數量 +1', 
-                    action: () => { 
-                        if (player.weapons.scatter < 10) player.weapons.scatter++;
-                        updateWeaponDisplay();
-                    }
+                    desc: '子彈數 +1', 
+                    action: () => { if (player.weapons.scatter < 10) player.weapons.scatter++; updateWeaponDisplay(); }
                 },
                 { 
                     id: 'laser', 
                     name: `⚡ 雷射 (Lv.${Math.min(10, player.weapons.laser + 1)})`, 
-                    desc: '追蹤雷射強化', 
-                    action: () => { 
-                        if (player.weapons.laser < 10) player.weapons.laser++;
-                        updateWeaponDisplay();
-                    }
+                    desc: '追蹤強化', 
+                    action: () => { if (player.weapons.laser < 10) player.weapons.laser++; updateWeaponDisplay(); }
                 },
                 { 
                     id: 'shield', 
                     name: '🛡️ 能量護盾', 
-                    desc: '防護罩 (3 次抵擋)', 
-                    action: () => { 
-                        shieldCharges = 3;
-                        shieldElement.textContent = `${shieldCharges}/3`;
-                    }
+                    desc: '3 次抵擋護盾', 
+                    action: () => { shieldCharges = 3; shieldElement.textContent = `${shieldCharges}/3`; }
                 },
                 {
                     id: 'heal',
                     name: `❤️ 醫療 (Lv.${player.weapons.heal + 1})`,
-                    desc: `直接 +1 血量`,
-                    action: () => {
-                        player.weapons.heal++;
-                        lives += 1; 
-                        livesElement.textContent = lives;
-                        updateWeaponDisplay();
-                    }
+                    desc: `生命 +1`,
+                    action: () => { player.weapons.heal++; lives += 1; livesElement.textContent = lives; updateWeaponDisplay(); }
                 }
             ];
 
@@ -618,14 +713,10 @@
             skillModal.style.display = 'none';
             isPausedForSkill = false;
 
-            if (initialPick) {
-                startCountdown();
-            }
+            if (initialPick) startCountdown();
         }
 
-        function startCountdown() {
-            countdownTimer = 180; 
-        }
+        function startCountdown() { countdownTimer = 180; }
 
         let enemySpawnTimer = 0;
         function handleSpawns() {
@@ -651,7 +742,6 @@
             let spawnInterval = Math.max(20, 45 - (wave * 3));
             if (enemySpawnTimer > spawnInterval && enemies.length < 8) {
                 let isSky = Math.random() < 0.33; 
-                
                 let baseSpeed = 2.5 + (wave * 0.2);
                 let colorType = 'green';
                 let hp = 1;
@@ -659,15 +749,8 @@
 
                 if (!isSky) {
                     let randColor = Math.random();
-                    if (randColor < 0.33) {
-                        colorType = 'red';
-                        speed = baseSpeed * 2.0; 
-                    } else if (randColor < 0.66) {
-                        colorType = 'yellow';
-                        hp = 2; 
-                    } else {
-                        colorType = 'green';
-                    }
+                    if (randColor < 0.33) { colorType = 'red'; speed = baseSpeed * 2.0; }
+                    else if (randColor < 0.66) { colorType = 'yellow'; hp = 2; }
                 }
 
                 enemies.push({
@@ -702,9 +785,7 @@
 
             if (countdownTimer > 0) {
                 countdownTimer--;
-                if (countdownTimer === 0) {
-                    isGameStarted = true;
-                }
+                if (countdownTimer === 0) isGameStarted = true;
                 return;
             }
 
@@ -782,16 +863,11 @@
                     let minDist = b.homingRange;
                     enemies.forEach(e => {
                         let dist = Math.hypot((e.x + e.width/2) - b.x, (e.y + e.height/2) - b.y);
-                        if (dist < minDist) {
-                            minDist = dist;
-                            target = e;
-                        }
+                        if (dist < minDist) { minDist = dist; target = e; }
                     });
                     if (boss) {
                         let dist = Math.hypot((boss.x + boss.width/2) - b.x, (boss.y + boss.height/2) - b.y);
-                        if (dist < minDist) {
-                            target = boss;
-                        }
+                        if (dist < minDist) target = boss;
                     }
 
                     if (target) {
@@ -872,19 +948,12 @@
 
                         if (enemies[i].hp <= 0) {
                             let deadX = enemies[i].x;
-                            let deadY = enemies[i].y;
                             enemies.splice(i, 1);
-
                             score += 100;
                             scoreElement.textContent = score;
 
                             if (!powerUp && Math.random() < 0.10) {
-                                powerUp = {
-                                    x: deadX,
-                                    y: groundY - 26, 
-                                    width: 26,
-                                    height: 26
-                                };
+                                powerUp = { x: deadX, y: groundY - 26, width: 26, height: 26 };
                             }
                         }
                         break;
@@ -902,16 +971,12 @@
                     takeDamage();
                 }
 
-                if (enemies[i] && enemies[i].x < -30) {
-                    enemies.splice(i, 1);
-                }
+                if (enemies[i] && enemies[i].x < -30) enemies.splice(i, 1);
             }
 
             if (boss) {
                 boss.y += boss.vy;
-                if (boss.y <= 80 || boss.y >= groundY - boss.height) {
-                    boss.vy *= -1;
-                }
+                if (boss.y <= 80 || boss.y >= groundY - boss.height) boss.vy *= -1;
 
                 boss.shootTimer++;
                 let shootInterval = Math.max(25, 50 - (wave * 3));
@@ -1041,6 +1106,7 @@
             ctx.fillRect(0, groundY, canvas.width, 4);
         }
 
+        // 精靈圖繪製與切格修復
         function drawPlayer() {
             ctx.save();
             ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
@@ -1055,9 +1121,9 @@
 
             if (player.isShooting && shootSpriteImg.complete && shootSpriteImg.naturalWidth > 0) {
                 imgToDraw = shootSpriteImg;
-                cols = 8;
+                cols = 1; // 單張射擊畫面切格
                 rows = 1;
-                colIndex = player.shootFrame;
+                colIndex = 0;
                 rowIndex = 0;
             } else if (runSpriteImg.complete && runSpriteImg.naturalWidth > 0) {
                 imgToDraw = runSpriteImg;
@@ -1187,9 +1253,7 @@
 
             enemies.forEach(e => drawEnemy(e));
 
-            if (boss) {
-                drawBoss(boss);
-            }
+            if (boss) drawBoss(boss);
 
             if (countdownTimer > 0) {
                 ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
@@ -1226,7 +1290,6 @@
             }
         }
 
-        // 重新開始按鈕點擊判定 (支援觸控與點擊)
         function handleRestartClick(e) {
             if (!isGameOver) return;
             const rect = canvas.getBoundingClientRect();
@@ -1251,7 +1314,7 @@
             requestAnimationFrame(loop);
         }
 
-        openSkillChoices(true);
+        autoDetectDevice();
         loop();
     </script>
 </body>
