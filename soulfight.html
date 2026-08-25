@@ -352,12 +352,12 @@
         </div>
     </div>
 
-    <!-- 電腦版鍵盤說明 (動態顯示/隱藏) -->
+    <!-- 電腦版鍵盤說明 -->
     <div class="key-hints" id="pcKeyHints" style="display: none;">
         💡 <b>鍵盤操作：</b> 移動 <span>⬅️ ➡️</span> | 瞄準 <span>⬆️</span> | 跳躍 <span>X / 空白</span> | 射擊 <span>Z</span> | 無敵 <span>C</span> | 技能 <span>1/2/3</span>[cite: 1]
     </div>
 
-    <!-- 手機版觸控按鈕 (動態顯示/隱藏) -->
+    <!-- 手機版觸控按鈕 -->
     <div class="mobile-controls" id="mobileControls" style="display: none;">
         <div class="dpad">
             <div class="dpad-btn dpad-up" id="btnUp">⬆️</div>
@@ -406,7 +406,7 @@
             bossImages.push(document.getElementById(`boss${i}`));
         }
 
-        let gameMode = 'pc'; // 'pc' 或 'mobile'
+        let gameMode = 'pc';
         let score = 0;
         let lives = 10;
         let shieldCharges = 0;
@@ -461,7 +461,6 @@
         let boss = null;
         let keys = {};
 
-        // --- 自動偵測載入模式 ---
         function autoDetectDevice() {
             const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
             const isMobileWidth = window.innerWidth <= 768;
@@ -490,7 +489,6 @@
             openSkillChoices(true);
         }
 
-        // 鍵盤操控事件
         window.addEventListener('keydown', (e) => {
             if (e.repeat) return;
             keys[e.code] = true;
@@ -523,7 +521,6 @@
 
         window.addEventListener('keyup', (e) => { keys[e.code] = false; });
 
-        // 觸控按鈕綁定
         function bindTouchButton(id, keyCode) {
             const el = document.getElementById(id);
             if (!el) return;
@@ -1106,7 +1103,7 @@
             ctx.fillRect(0, groundY, canvas.width, 4);
         }
 
-        // 精靈圖繪製與切格修復
+        // 精靈圖繪製（已修復 8 人物殘影問題）
         function drawPlayer() {
             ctx.save();
             ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
@@ -1121,7 +1118,7 @@
 
             if (player.isShooting && shootSpriteImg.complete && shootSpriteImg.naturalWidth > 0) {
                 imgToDraw = shootSpriteImg;
-                cols = 1; // 單張射擊畫面切格
+                cols = 1; // 修正為 1 欄，避免圖片被強制切成 8 份
                 rows = 1;
                 colIndex = 0;
                 rowIndex = 0;
