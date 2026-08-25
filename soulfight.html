@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>無限魂戰鬥</title>
+    <title>無限魂斗羅：多重 Boss 與怪物版</title>
     <style>
         body {
             background-color: #111;
@@ -166,79 +166,73 @@
 </head>
 <body>
 
+    <!-- 主角與子彈圖片 -->
+    <img id="runSprite" src="player_run.png" style="display:none;" alt="run sprite">
+    <img id="shootSprite" src="player_shoot.png" style="display:none;" alt="shoot sprite">
+    <img id="shootBulletImg" src="SHOOT1.PNG" style="display:none;" alt="shoot bullet">
+
+    <!-- 怪物 1 ~ 10 圖片預先載入 -->
+    <img id="monster1" src="MONSTER1.PNG" style="display:none;" alt="monster 1">
+    <img id="monster2" src="MONSTER2.PNG" style="display:none;" alt="monster 2">
+    <img id="monster3" src="MONSTER3.PNG" style="display:none;" alt="monster 3">
+    <img id="monster4" src="MONSTER4.PNG" style="display:none;" alt="monster 4">
+    <img id="monster5" src="MONSTER5.PNG" style="display:none;" alt="monster 5">
+    <img id="monster6" src="MONSTER6.PNG" style="display:none;" alt="monster 6">
+    <img id="monster7" src="MONSTER7.PNG" style="display:none;" alt="monster 7">
+    <img id="monster8" src="MONSTER8.PNG" style="display:none;" alt="monster 8">
+    <img id="monster9" src="MONSTER9.PNG" style="display:none;" alt="monster 9">
+    <img id="monster10" src="MONSTER10.PNG" style="display:none;" alt="monster 10">
+
+    <!-- BOSS 1 ~ 10 圖片預先載入 -->
+    <img id="boss1" src="BOSS1.png" style="display:none;" alt="boss 1">
+    <img id="boss2" src="BOSS2.png" style="display:none;" alt="boss 2">
+    <img id="boss3" src="BOSS3.png" style="display:none;" alt="boss 3">
+    <img id="boss4" src="BOSS4.png" style="display:none;" alt="boss 4">
+    <img id="boss5" src="BOSS5.png" style="display:none;" alt="boss 5">
+    <img id="boss6" src="BOSS6.png" style="display:none;" alt="boss 6">
+    <img id="boss7" src="BOSS7.png" style="display:none;" alt="boss 7">
+    <img id="boss8" src="BOSS8.png" style="display:none;" alt="boss 8">
+    <img id="boss9" src="BOSS9.png" style="display:none;" alt="boss 9">
+    <img id="boss10" src="BOSS10.png" style="display:none;" alt="boss 10">
+
     <h1>👻 魂斗羅：多重 Boss 與怪物版</h1>
     
     <div id="scoreboard">
-        <div>分數: <span id="score">0</span></div>
-        <div>生命: <span id="lives">10</span></div>
-        <div>護盾: <span id="shield" style="color: #00E5FF;">0/3</span></div>
-        <div>關卡: <span id="wave" style="color: #4CAF50;">第 1 波</span></div>
-        <div>武器: <span id="weapon" style="color: #FFEB3B;">普彈 Lv.1</span></div>
-        <div>無敵CD: <span id="invincibleCd" style="color: #00E5FF;">就緒 (C)</span></div>
+        <div>分數: <span id="score">0</span>[cite: 1]</div>
+        <div>生命: <span id="lives">10</span>[cite: 1]</div>
+        <div>護盾: <span id="shield" style="color: #00E5FF;">0/3</span>[cite: 1]</div>
+        <div>關卡: <span id="wave" style="color: #4CAF50;">第 1 波</span>[cite: 1]</div>
+        <div>武器: <span id="weapon" style="color: #FFEB3B;">普通槍 (Lv.1)</span>[cite: 1]</div>
+        <div>無敵CD: <span id="invincibleCd" style="color: #00E5FF;">就緒 (C)</span>[cite: 1]</div>
     </div>
 
     <div class="game-container">
         <canvas id="gameCanvas" width="650" height="360"></canvas>
         
         <div id="skillModal">
-            <h2 id="modalTitle">🎁 獲得補給箱！請選擇技能 (按 1, 2, 3)：</h2>
+            <h2 id="modalTitle">🎁 獲得補給箱！請選擇技能 (按 1, 2, 3)：</h2>[cite: 1]
             <div class="skill-options" id="skillOptionsContainer"></div>
         </div>
     </div>
 
     <div class="key-hints">
-        💡 <b>操作說明：</b> 移動 <span>⬅️ ➡️</span> | 瞄準 <span>⬆️</span> | 二段跳 <span>X / 空白</span> | 點擊射擊 <span>Z</span> | 無敵 <span>C</span> | 技能 <span>1/2/3</span>
+        💡 <b>操作說明：</b> 移動 <span>⬅️ ➡️</span> | 瞄準 <span>⬆️</span> | 二段跳 <span>X / 空白</span> | 點擊射擊 <span>Z</span> | 無敵 <span>C</span> | 技能 <span>1/2/3</span>[cite: 1]
     </div>
 
     <div class="controls">
         <div class="ctrl-group">
-            <button class="btn btn-up" id="btnUp">⬆️</button>
-            <button class="btn btn-left" id="btnLeft">⬅️</button>
-            <button class="btn btn-right" id="btnRight">➡️</button>
+            <button class="btn btn-up" id="btnUp">⬆️</button>[cite: 1]
+            <button class="btn btn-left" id="btnLeft">⬅️</button>[cite: 1]
+            <button class="btn btn-right" id="btnRight">➡️</button>[cite: 1]
         </div>
         <div class="action-group">
-            <button class="btn btn-jump" id="btnJump">跳躍(X)</button>
-            <button class="btn btn-fire" id="btnFire">🔥 射擊(Z)</button>
-            <button class="btn btn-invincible" id="btnInvinc">🛡️ 無敵(C)</button>
+            <button class="btn btn-jump" id="btnJump">跳躍(X)</button>[cite: 1]
+            <button class="btn btn-fire" id="btnFire">🔥 射擊(Z)</button>[cite: 1]
+            <button class="btn btn-invincible" id="btnInvinc">🛡️ 無敵(C)</button>[cite: 1]
         </div>
     </div>
 
     <script>
-        // ==========================================
-        // 🖼️ 圖片路徑設定區 (在下方修改你的圖片檔名)
-        // ==========================================
-        const IMAGE_PATHS = {
-            playerRun: 'player_run.png',
-            playerShoot: 'player_shoot.png',
-            bullet: 'SHOOT1.PNG',
-            // 10 種小怪檔名
-            monsters: [
-                'MONSTER1.PNG', 'MONSTER2.PNG', 'MONSTER3.PNG', 'MONSTER4.PNG', 'MONSTER5.PNG',
-                'MONSTER6.PNG', 'MONSTER7.PNG', 'MONSTER8.PNG', 'MONSTER9.PNG', 'MONSTER10.PNG'
-            ],
-            // 10 種 BOSS 檔名
-            bosses: [
-                'BOSS1.png', 'BOSS2.png', 'BOSS3.png', 'BOSS4.png', 'BOSS5.png',
-                'BOSS6.png', 'BOSS7.png', 'BOSS8.png', 'BOSS9.png', 'BOSS10.png'
-            ]
-        };
-
-        // 自動動態載入圖片
-        function loadImage(src) {
-            const img = new Image();
-            img.src = src;
-            return img;
-        }
-
-        const runSpriteImg = loadImage(IMAGE_PATHS.playerRun);
-        const shootSpriteImg = loadImage(IMAGE_PATHS.playerShoot);
-        const shootBulletImg = loadImage(IMAGE_PATHS.bullet);
-        const monsterImages = IMAGE_PATHS.monsters.map(src => loadImage(src));
-        const bossImages = IMAGE_PATHS.bosses.map(src => loadImage(src));
-
-        // ==========================================
-        // 🎮 遊戲核心邏輯
-        // ==========================================
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -251,6 +245,20 @@
         const skillModal = document.getElementById('skillModal');
         const modalTitle = document.getElementById('modalTitle');
         const skillOptionsContainer = document.getElementById('skillOptionsContainer');
+
+        const runSpriteImg = document.getElementById('runSprite');
+        const shootSpriteImg = document.getElementById('shootSprite');
+        const shootBulletImg = document.getElementById('shootBulletImg');
+
+        const monsterImages = [];
+        for (let i = 1; i <= 10; i++) {
+            monsterImages.push(document.getElementById(`monster${i}`));
+        }
+
+        const bossImages = [];
+        for (let i = 1; i <= 10; i++) {
+            bossImages.push(document.getElementById(`boss${i}`));
+        }
 
         let score = 0;
         let lives = 10;
@@ -385,6 +393,7 @@
             if (isGameOver || isPausedForSkill || !isGameStarted) return;
             if (player.shootCooldown > 0) return;
 
+            // 調整為 0.1 秒冷卻 (60fps 的遊戲中，0.1秒約等於 6 個影格)[cite: 1]
             player.shootCooldown = 6;
             player.isShooting = true;
             player.shootFrame = 0;
@@ -457,6 +466,7 @@
                 let currentChance = (1 + (player.weapons.heal - 1) * 0.5).toFixed(1);
                 activeList.push(`醫療 Lv.${player.weapons.heal} (${currentChance}%)`);
             }
+            
             weaponElement.textContent = activeList.join(" | ");
         }
 
@@ -465,9 +475,11 @@
             initialPick = isInitial;
             skillOptionsContainer.innerHTML = '';
             
-            modalTitle.textContent = isInitial 
-                ? "🎁 遊戲即將開始！請選擇您的開局初始技能 (按 1, 2, 3)：" 
-                : "🎁 獲得補給箱！請選擇技能 (按 1, 2, 3)：";
+            if (isInitial) {
+                modalTitle.textContent = "🎁 遊戲即將開始！請選擇您的開局初始技能 (按 1, 2, 3)：";
+            } else {
+                modalTitle.textContent = "🎁 獲得補給箱！請選擇技能 (按 1, 2, 3)：";
+            }
             
             let currentHealChance = 1 + (player.weapons.heal * 0.5);
 
@@ -568,6 +580,7 @@
             let spawnInterval = Math.max(20, 45 - (wave * 3));
             if (enemySpawnTimer > spawnInterval && enemies.length < 8) {
                 let isSky = Math.random() < 0.33; 
+                
                 let baseSpeed = 2.5 + (wave * 0.2);
                 let colorType = 'green';
                 let hp = 1;
@@ -788,6 +801,7 @@
 
                         if (enemies[i].hp <= 0) {
                             let deadX = enemies[i].x;
+                            let deadY = enemies[i].y;
                             enemies.splice(i, 1);
 
                             score += 100;
@@ -853,175 +867,314 @@
                     ) {
                         bullets.splice(j, 1);
                         boss.hp--;
+                        score += 50;
+                        scoreElement.textContent = score;
 
                         if (boss.hp <= 0) {
-                            score += 5000;
-                            scoreElement.textContent = score;
                             boss = null;
                             wave++;
                             waveElement.textContent = `第 ${wave} 波`;
-                            openSkillChoices(false);
-                            break;
+                            score += 500;
+                            scoreElement.textContent = score;
+                            if (lives < 15) lives++;
+                            livesElement.textContent = lives;
                         }
+                        break;
                     }
-                }
-
-                if (
-                    boss &&
-                    player.x < boss.x + boss.width &&
-                    player.x + player.width > boss.x &&
-                    player.y < boss.y + boss.height &&
-                    player.y + player.height > boss.y
-                ) {
-                    takeDamage();
                 }
             }
 
             handleSpawns();
         }
 
-        function draw() {
-            ctx.fillStyle = '#1a1a2e';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        function restartGame() {
+            score = 0;
+            lives = 10;
+            shieldCharges = 0;
+            wave = 1;
+            isGameOver = false;
+            invincibleTimer = 0;
+            invincibleCdTimer = 0;
+            player.weapons = { normal: 1, scatter: 0, laser: 0, heal: 0 };
+            player.shootCooldown = 0;
+            player.x = 50;
+            player.y = 240;
+            player.isJumping = false;
+            player.canDoubleJump = false;
+            enemies = [];
+            bullets = [];
+            enemyBullets = [];
+            boss = null;
+            powerUp = null;
+            scoreElement.textContent = score;
+            livesElement.textContent = lives;
+            shieldElement.textContent = `${shieldCharges}/3`;
+            waveElement.textContent = `第 1 波`;
+            updateWeaponDisplay();
 
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+            isGameStarted = false;
+            openSkillChoices(true);
+        }
+
+        function drawBackground() {
+            let skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
+            skyGrad.addColorStop(0, '#0b0b1a');
+            skyGrad.addColorStop(1, '#2c163a');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, canvas.width, groundY);
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
             clouds.forEach(c => {
                 ctx.beginPath();
-                ctx.arc(c.x, c.y, c.size * 0.4, 0, Math.PI * 2);
-                ctx.arc(c.x + c.size * 0.25, c.y - c.size * 0.15, c.size * 0.3, 0, Math.PI * 2);
-                ctx.arc(c.x + c.size * 0.5, c.y, c.size * 0.35, 0, Math.PI * 2);
+                ctx.arc(c.x, c.y, c.size * 0.5, 0, Math.PI * 2);
+                ctx.arc(c.x + c.size * 0.4, c.y - c.size * 0.2, c.size * 0.4, 0, Math.PI * 2);
+                ctx.arc(c.x + c.size * 0.8, c.y, c.size * 0.45, 0, Math.PI * 2);
                 ctx.fill();
             });
 
-            ctx.fillStyle = '#2d5a27';
-            ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
-            ctx.fillStyle = '#4CAF50';
-            ctx.fillRect(0, groundY, canvas.width, 6);
-
-            if (invincibleTimer > 0) {
-                ctx.strokeStyle = 'rgba(0, 229, 255, 0.8)';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(player.x + player.width / 2, player.y + player.height / 2, player.width * 0.7, 0, Math.PI * 2);
-                ctx.stroke();
+            ctx.fillStyle = '#151328';
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            let mountainOffset = (bgScrollX * 0.2) % canvas.width;
+            for (let x = -mountainOffset; x < canvas.width + 200; x += 150) {
+                ctx.lineTo(x, groundY - 110);
+                ctx.lineTo(x + 75, groundY - 160);
+                ctx.lineTo(x + 150, groundY);
             }
+            ctx.lineTo(canvas.width, groundY);
+            ctx.fill();
+
+            ctx.fillStyle = '#1f1a3a';
+            let ruinOffset = (bgScrollX * 0.5) % 200;
+            for (let x = -ruinOffset; x < canvas.width + 200; x += 200) {
+                ctx.fillRect(x, groundY - 90, 70, 90);
+                ctx.fillStyle = '#0b0b1a';
+                ctx.fillRect(x + 15, groundY - 70, 15, 25);
+                ctx.fillRect(x + 40, groundY - 70, 15, 25);
+                ctx.fillStyle = '#1f1a3a';
+            }
+
+            ctx.fillStyle = '#111019';
+            ctx.fillRect(0, groundY - 15, canvas.width, 15);
+
+            ctx.fillStyle = '#16213e';
+            ctx.fillRect(0, groundY, canvas.width, 80);
+            
+            ctx.fillStyle = '#0a0f1d';
+            let tileOffset = bgScrollX % 40;
+            for (let x = -tileOffset; x < canvas.width; x += 40) {
+                ctx.fillRect(x, groundY + 10, 2, 50);
+            }
+
+            ctx.fillStyle = '#e94560';
+            ctx.fillRect(0, groundY, canvas.width, 4);
+        }
+
+        function drawPlayer() {
+            ctx.save();
+            ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
+            ctx.scale(player.facing, 1);
+
+            if (invincibleTimer > 0 || shieldCharges > 0) {
+                ctx.shadowColor = shieldCharges > 0 ? '#00E5FF' : '#FFD700';
+                ctx.shadowBlur = 14;
+            }
+
+            let imgToDraw, cols, rows, colIndex, rowIndex;
+
+            if (player.isShooting && shootSpriteImg.complete && shootSpriteImg.naturalWidth > 0) {
+                imgToDraw = shootSpriteImg;
+                cols = 8;
+                rows = 1;
+                colIndex = player.shootFrame;
+                rowIndex = 0;
+            } else if (runSpriteImg.complete && runSpriteImg.naturalWidth > 0) {
+                imgToDraw = runSpriteImg;
+                cols = 6;
+                rows = 2;
+                if (player.isJumping) {
+                    colIndex = 3;
+                    rowIndex = 0;
+                } else if (player.vx !== 0) {
+                    colIndex = player.runFrame % 6;
+                    rowIndex = Math.floor(player.runFrame / 6);
+                } else {
+                    colIndex = 0;
+                    rowIndex = 0;
+                }
+            } else {
+                imgToDraw = null;
+            }
+
+            if (imgToDraw && imgToDraw.complete && imgToDraw.naturalWidth > 0) {
+                let fWidth = imgToDraw.naturalWidth / cols;
+                let fHeight = imgToDraw.naturalHeight / rows;
+                let sx = colIndex * fWidth;
+                let sy = rowIndex * fHeight;
+
+                ctx.drawImage(
+                    imgToDraw,
+                    sx, sy, fWidth, fHeight,
+                    -player.width / 2, -player.height / 2, player.width, player.height
+                );
+            } else {
+                ctx.fillStyle = '#4CAF50';
+                ctx.fillRect(-player.width / 2, -player.height / 2, player.width, player.height);
+            }
+
+            ctx.restore();
 
             if (shieldCharges > 0) {
-                ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
+                ctx.save();
+                ctx.strokeStyle = '#00E5FF';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.arc(player.x + player.width / 2, player.y + player.height / 2, player.width * 0.6, 0, Math.PI * 2);
+                ctx.arc(player.x + player.width/2, player.y + player.height/2, player.width * 0.75, 0, Math.PI * 2);
                 ctx.stroke();
-            }
-
-            // 繪製玩家
-            let pImg = player.isShooting ? shootSpriteImg : runSpriteImg;
-            if (pImg.complete && pImg.naturalWidth !== 0) {
-                ctx.save();
-                if (player.facing < 0) {
-                    ctx.scale(-1, 1);
-                    ctx.drawImage(pImg, -player.x - player.width, player.y, player.width, player.height);
-                } else {
-                    ctx.drawImage(pImg, player.x, player.y, player.width, player.height);
-                }
                 ctx.restore();
+            }
+        }
+
+        function drawEnemy(e) {
+            let monsterImgIndex = (wave - 1) % 10;
+            let currentMonsterImg = monsterImages[monsterImgIndex];
+
+            ctx.save();
+            if (!e.isSky) {
+                if (e.colorType === 'red') {
+                    ctx.filter = 'sepia(1) saturate(5) hue-rotate(300deg)'; 
+                } else if (e.colorType === 'yellow') {
+                    ctx.filter = 'sepia(1) saturate(5) hue-rotate(0deg)'; 
+                }
             } else {
-                ctx.fillStyle = '#00E5FF';
-                ctx.fillRect(player.x, player.y, player.width, player.height);
+                ctx.filter = 'sepia(1) saturate(4) hue-rotate(140deg)'; 
             }
 
-            // 繪製玩家子彈
+            if (currentMonsterImg && currentMonsterImg.complete && currentMonsterImg.naturalWidth > 0) {
+                ctx.drawImage(currentMonsterImg, e.x, e.y, e.width, e.height);
+            } else {
+                ctx.fillStyle = e.isSky ? '#00BCD4' : (e.colorType === 'red' ? '#FF1744' : (e.colorType === 'yellow' ? '#FFEA00' : '#4CAF50'));
+                ctx.fillRect(e.x + 4, e.y + 4, 24, 16);
+            }
+            ctx.restore();
+        }
+
+        function drawBoss(b) {
+            let bossImgIndex = (wave - 1) % 10;
+            let currentBossImg = bossImages[bossImgIndex];
+
+            if (currentBossImg && currentBossImg.complete && currentBossImg.naturalWidth > 0) {
+                ctx.drawImage(currentBossImg, b.x, b.y, b.width, b.height);
+            } else {
+                ctx.save();
+                ctx.globalAlpha = 0.85;
+                ctx.fillStyle = '#9C27B0';
+                ctx.beginPath();
+                ctx.arc(b.x + b.width / 2, b.y + 30, 30, Math.PI, 0, false);
+                ctx.lineTo(b.x + b.width, b.y + b.height - 10);
+                ctx.lineTo(b.x + b.width * 0.75, b.y + b.height);
+                ctx.lineTo(b.x + b.width * 0.5, b.y + b.height - 12);
+                ctx.lineTo(b.x + b.width * 0.25, b.y + b.height);
+                ctx.lineTo(b.x, b.y + b.height - 10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+
+            ctx.fillStyle = '#333';
+            ctx.fillRect(b.x, b.y - 12, b.width, 6);
+            ctx.fillStyle = '#4CAF50';
+            ctx.fillRect(b.x, b.y - 12, b.width * Math.max(0, b.hp / b.maxHp), 6);
+        }
+
+        function draw() {
+            drawBackground();
+
+            if (powerUp) {
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
+                ctx.fillStyle = '#000';
+                ctx.font = "bold 14px 'Segoe UI'";
+                ctx.fillText("S", powerUp.x + 8, powerUp.y + 19);
+            }
+
+            drawPlayer();
+
             bullets.forEach(b => {
-                if (shootBulletImg.complete && shootBulletImg.naturalWidth !== 0) {
+                if (b.type === 'normal' && shootBulletImg.complete && shootBulletImg.naturalWidth > 0) {
                     ctx.drawImage(shootBulletImg, b.x, b.y, b.width, b.height);
                 } else {
-                    ctx.fillStyle = b.type === 'scatter' ? '#FFD700' : (b.type === 'laser' ? '#00E5FF' : '#FF5722');
+                    ctx.fillStyle = b.type === 'laser' ? '#00E5FF' : '#FFEB3B';
                     ctx.fillRect(b.x, b.y, b.width, b.height);
                 }
             });
 
-            // 繪製敵方子彈
             enemyBullets.forEach(eb => {
-                ctx.fillStyle = '#FF1744';
-                ctx.beginPath();
-                ctx.arc(eb.x + eb.width/2, eb.y + eb.height/2, eb.width/2, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.fillStyle = eb.width > 20 ? '#FF9800' : '#00E5FF';
+                ctx.fillRect(eb.x, eb.y, eb.width, eb.height);
             });
 
-            // 繪製怪物
-            enemies.forEach(e => {
-                let mImgIdx = (wave - 1) % 10;
-                let mImg = monsterImages[mImgIdx];
-                if (mImg && mImg.complete && mImg.naturalWidth !== 0) {
-                    ctx.drawImage(mImg, e.x, e.y, e.width, e.height);
-                } else {
-                    ctx.fillStyle = e.colorType === 'red' ? '#FF1744' : (e.colorType === 'yellow' ? '#FFD700' : '#4CAF50');
-                    ctx.fillRect(e.x, e.y, e.width, e.height);
-                }
-            });
+            enemies.forEach(e => drawEnemy(e));
 
-            // 繪製寶箱
-            if (powerUp) {
-                ctx.fillStyle = '#FFD700';
-                ctx.fillRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
-                ctx.strokeStyle = '#FFF';
-                ctx.strokeRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
-            }
-
-            // 繪製 BOSS
             if (boss) {
-                let bImgIdx = (wave - 1) % 10;
-                let bImg = bossImages[bImgIdx];
-                if (bImg && bImg.complete && bImg.naturalWidth !== 0) {
-                    ctx.drawImage(bImg, boss.x, boss.y, boss.width, boss.height);
-                } else {
-                    ctx.fillStyle = '#D500F9';
-                    ctx.fillRect(boss.x, boss.y, boss.width, boss.height);
-                }
-
-                // BOSS 血條
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                ctx.fillRect(boss.x, boss.y - 12, boss.width, 8);
-                ctx.fillStyle = '#FF1744';
-                ctx.fillRect(boss.x, boss.y - 12, (boss.hp / boss.maxHp) * boss.width, 8);
+                drawBoss(boss);
             }
 
-            // 倒數計時
             if (countdownTimer > 0) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 48px sans-serif';
-                ctx.textAlign = 'center';
-                let sec = Math.ceil(countdownTimer / 60);
-                ctx.fillText(`準備開始: ${sec}`, canvas.width / 2, canvas.height / 2);
-                ctx.textAlign = 'left';
+                ctx.fillStyle = "#FFEB3B";
+                ctx.font = "bold 60px 'Segoe UI'";
+                ctx.textAlign = "center";
+                let secLeft = Math.ceil(countdownTimer / 60);
+                ctx.fillText(secLeft, canvas.width / 2, canvas.height / 2 + 15);
+                ctx.font = "bold 20px 'Segoe UI'";
+                ctx.fillStyle = "#fff";
+                ctx.fillText("遊戲即將開始...", canvas.width / 2, canvas.height / 2 - 40);
+                ctx.textAlign = "left";
             }
 
-            // 遊戲結束
             if (isGameOver) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+                ctx.fillStyle = "rgba(0, 0, 0, 0.88)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#FF1744';
-                ctx.font = 'bold 36px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 10);
-                ctx.fillStyle = '#FFF';
-                ctx.font = '18px sans-serif';
-                ctx.fillText(`最終分數: ${score}`, canvas.width / 2, canvas.height / 2 + 25);
-                ctx.fillText('請重新整理網頁以再次挑戰', canvas.width / 2, canvas.height / 2 + 55);
-                ctx.textAlign = 'left';
+                ctx.fillStyle = "white";
+                ctx.font = "bold 30px 'Segoe UI'";
+                ctx.textAlign = "center";
+                ctx.fillText("遊戲結束 (GAME OVER)", canvas.width / 2, canvas.height / 2 - 35);
+                
+                ctx.font = "15px 'Segoe UI'";
+                ctx.fillStyle = "#aaa";
+                ctx.fillText(`最終得分: ${score}分 (生存至第 ${wave} 波)`, canvas.width / 2, canvas.height / 2);
+
+                ctx.fillStyle = "#ff4444";
+                ctx.fillRect(canvas.width / 2 - 75, canvas.height / 2 + 25, 150, 40);
+                ctx.fillStyle = "white";
+                ctx.font = "bold 16px 'Segoe UI'";
+                ctx.fillText("🔄 再次挑戰", canvas.width / 2, canvas.height / 2 + 50);
+                ctx.textAlign = "left";
             }
         }
 
-        function gameLoop() {
+        canvas.addEventListener('click', (e) => {
+            if (!isGameOver) return;
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            if (clickX >= canvas.width / 2 - 75 && clickX <= canvas.width / 2 + 75 &&
+                clickY >= canvas.height / 2 + 25 && clickY <= canvas.height / 2 + 65) {
+                restartGame();
+            }
+        });
+
+        function loop() {
             update();
             draw();
-            requestAnimationFrame(gameLoop);
+            requestAnimationFrame(loop);
         }
 
         openSkillChoices(true);
-        requestAnimationFrame(gameLoop);
+        loop();
     </script>
 </body>
 </html>
