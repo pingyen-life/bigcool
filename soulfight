@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>無限魂斗羅：多重 Boss 與怪物版</title>
+    <style>
+        body {
+            background-color: #111;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        h1 {
+            margin: 5px 0;
+            font-size: 1.3rem;
+            color: #ff4444;
+            letter-spacing: 2px;
+        }
+
+        #scoreboard {
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .game-container {
+            position: relative;
+        }
+
+        canvas {
+            border: 3px solid #ff4444;
+            background-color: #1a1a2e;
+            box-shadow: 0 0 15px rgba(255, 68, 68, 0.4);
+            max-width: 95vw;
+            width: 650px;
+            height: 360px;
+            display: block;
+        }
+
+        #skillModal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        #skillModal h2 {
+            color: #FFD700;
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+            text-align: center;
+        }
+
+        .skill-options {
+            display: flex;
+            gap: 15px;
+        }
+
+        .skill-card {
+            background: #222;
+            border: 2px solid #FFD700;
+            padding: 15px;
+            width: 150px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .skill-card:hover {
+            background: #444;
+            transform: scale(1.05);
+        }
+
+        .skill-card h3 {
+            margin: 0 0 8px 0;
+            color: #FFEB3B;
+            font-size: 0.95rem;
+        }
+
+        .skill-card p {
+            margin: 0;
+            font-size: 0.75rem;
+            color: #ccc;
+        }
+
+        .key-hints {
+            margin-top: 5px;
+            background-color: #222;
+            border: 1px solid #444;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #aaa;
+            text-align: center;
+            max-width: 650px;
+        }
+
+        .key-hints span {
+            color: #FFEB3B;
+            font-weight: bold;
+        }
+
+        .controls {
+            margin-top: 8px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .ctrl-group {
+            display: grid;
+            grid-template-columns: repeat(3, 50px);
+            grid-template-rows: repeat(2, 45px);
+            gap: 4px;
+        }
+
+        .action-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn {
+            background-color: #333;
+            color: white;
+            border: 2px solid #555;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            outline: none;
+        }
+
+        .btn:active {
+            background-color: #ff4444;
+            border-color: #ff8888;
+        }
+
+        .btn-up { grid-column: 2; grid-row: 1; }
+        .btn-left { grid-column: 1; grid-row: 2; }
+        .btn-right { grid-column: 3; grid-row: 2; }
+
+        .btn-jump { background-color: #2a4b7c; width: 60px; height: 50px; font-size: 0.95rem; }
+        .btn-fire { background-color: #7c2a2a; width: 60px; height: 60px; font-size: 0.9rem; border-radius: 50%; }
+        .btn-invincible { background-color: #4A148C; width: 60px; height: 50px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+
+    <!-- 主角與子彈圖片 -->
+    <img id="runSprite" src="player_run.png" style="display:none;" alt="run sprite">
+    <img id="shootSprite" src="player_shoot.png" style="display:none;" alt="shoot sprite">
+    <img id="shootBulletImg" src="SHOOT1.PNG" style="display:none;" alt="shoot bullet">
+
+    <!-- 怪物 1 ~ 10 圖片預先載入 -->
+    <img id="monster1" src="MONSTER1.PNG" style="display:none;" alt="monster 1">
+    <img id="monster2" src="MONSTER2.PNG" style="display:none;" alt="monster 2">
+    <img id="monster3" src="MONSTER3.PNG" style="display:none;" alt="monster 3">
+    <img id="monster4" src="MONSTER4.PNG" style="display:none;" alt="monster 4">
+    <img id="monster5" src="MONSTER5.PNG" style="display:none;" alt="monster 5">
+    <img id="monster6" src="MONSTER6.PNG" style="display:none;" alt="monster 6">
+    <img id="monster7" src="MONSTER7.PNG" style="display:none;" alt="monster 7">
+    <img id="monster8" src="MONSTER8.PNG" style="display:none;" alt="monster 8">
+    <img id="monster9" src="MONSTER9.PNG" style="display:none;" alt="monster 9">
+    <img id="monster10" src="MONSTER10.PNG" style="display:none;" alt="monster 10">
+
+    <!-- BOSS 1 ~ 10 圖片預先載入 -->
+    <img id="boss1" src="BOSS1.png" style="display:none;" alt="boss 1">
+    <img id="boss2" src="BOSS2.png" style="display:none;" alt="boss 2">
+    <img id="boss3" src="BOSS3.png" style="display:none;" alt="boss 3">
+    <img id="boss4" src="BOSS4.png" style="display:none;" alt="boss 4">
+    <img id="boss5" src="BOSS5.png" style="display:none;" alt="boss 5">
+    <img id="boss6" src="BOSS6.png" style="display:none;" alt="boss 6">
+    <img id="boss7" src="BOSS7.png" style="display:none;" alt="boss 7">
+    <img id="boss8" src="BOSS8.png" style="display:none;" alt="boss 8">
+    <img id="boss9" src="BOSS9.png" style="display:none;" alt="boss 9">
+    <img id="boss10" src="BOSS10.png" style="display:none;" alt="boss 10">
+
+    <h1>👻 魂斗羅：多重 Boss 與怪物版</h1>
+    
+    <div id="scoreboard">
+        <div>分數: <span id="score">0</span>[cite: 1]</div>
+        <div>生命: <span id="lives">10</span>[cite: 1]</div>
+        <div>護盾: <span id="shield" style="color: #00E5FF;">0/3</span>[cite: 1]</div>
+        <div>關卡: <span id="wave" style="color: #4CAF50;">第 1 波</span>[cite: 1]</div>
+        <div>武器: <span id="weapon" style="color: #FFEB3B;">普通槍 (Lv.1)</span>[cite: 1]</div>
+        <div>無敵CD: <span id="invincibleCd" style="color: #00E5FF;">就緒 (C)</span>[cite: 1]</div>
+    </div>
+
+    <div class="game-container">
+        <canvas id="gameCanvas" width="650" height="360"></canvas>
+        
+        <div id="skillModal">
+            <h2 id="modalTitle">🎁 獲得補給箱！請選擇技能 (按 1, 2, 3)：</h2>[cite: 1]
+            <div class="skill-options" id="skillOptionsContainer"></div>
+        </div>
+    </div>
+
+    <div class="key-hints">
+        💡 <b>操作說明：</b> 移動 <span>⬅️ ➡️</span> | 瞄準 <span>⬆️</span> | 二段跳 <span>X / 空白</span> | 點擊射擊 <span>Z</span> | 無敵 <span>C</span> | 技能 <span>1/2/3</span>[cite: 1]
+    </div>
+
+    <div class="controls">
+        <div class="ctrl-group">
+            <button class="btn btn-up" id="btnUp">⬆️</button>[cite: 1]
+            <button class="btn btn-left" id="btnLeft">⬅️</button>[cite: 1]
+            <button class="btn btn-right" id="btnRight">➡️</button>[cite: 1]
+        </div>
+        <div class="action-group">
+            <button class="btn btn-jump" id="btnJump">跳躍(X)</button>[cite: 1]
+            <button class="btn btn-fire" id="btnFire">🔥 射擊(Z)</button>[cite: 1]
+            <button class="btn btn-invincible" id="btnInvinc">🛡️ 無敵(C)</button>[cite: 1]
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const scoreElement = document.getElementById('score');
+        const livesElement = document.getElementById('lives');
+        const shieldElement = document.getElementById('shield');
+        const waveElement = document.getElementById('wave');
+        const weaponElement = document.getElementById('weapon');
+        const invincibleCdElement = document.getElementById('invincibleCd');
+        const skillModal = document.getElementById('skillModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const skillOptionsContainer = document.getElementById('skillOptionsContainer');
+
+        const runSpriteImg = document.getElementById('runSprite');
+        const shootSpriteImg = document.getElementById('shootSprite');
+        const shootBulletImg = document.getElementById('shootBulletImg');
+
+        const monsterImages = [];
+        for (let i = 1; i <= 10; i++) {
+            monsterImages.push(document.getElementById(`monster${i}`));
+        }
+
+        const bossImages = [];
+        for (let i = 1; i <= 10; i++) {
+            bossImages.push(document.getElementById(`boss${i}`));
+        }
+
+        let score = 0;
+        let lives = 10;
+        let shieldCharges = 0;
+        let wave = 1;
+        let isGameOver = false;
+        let isPausedForSkill = false;
+        let isGameStarted = false; 
+        let countdownTimer = 0; 
+        let currentSkillChoices = [];
+        let initialPick = true;
+
+        let bgScrollX = 0;
+        let clouds = [
+            { x: 50, y: 40, speed: 0.2, size: 50 },
+            { x: 280, y: 70, speed: 0.15, size: 70 },
+            { x: 520, y: 30, speed: 0.25, size: 60 }
+        ];
+
+        let invincibleTimer = 0;
+        let invincibleCdTimer = 0;
+        const invincibleDuration = 180;
+        const invincibleCdMax = 1200;
+
+        let player = {
+            x: 50,
+            y: 240,
+            width: 52,
+            height: 52,
+            vx: 0,
+            vy: 0,
+            speed: 4,
+            jumpPower: -11.5,
+            isJumping: false,
+            canDoubleJump: false,
+            isShooting: false,
+            shootAnimTimer: 0,
+            facing: 1,
+            weapons: {
+                normal: 1,  
+                scatter: 0, 
+                laser: 0,
+                heal: 0     
+            },
+            shootCooldown: 0,
+            animTimer: 0,
+            runFrame: 0,
+            shootFrame: 0
+        };
+
+        let gravity = 0.55;
+        let groundY = 290;
+
+        let bullets = [];
+        let enemyBullets = [];
+        let enemies = [];
+        let powerUp = null;
+        let boss = null;
+
+        let keys = {};
+        window.addEventListener('keydown', (e) => {
+            if (e.repeat) return;
+            keys[e.code] = true;
+
+            if (isPausedForSkill) {
+                if (e.code === 'Digit1' || e.code === 'Numpad1') selectSkillByIndex(0);
+                if (e.code === 'Digit2' || e.code === 'Numpad2') selectSkillByIndex(1);
+                if (e.code === 'Digit3' || e.code === 'Numpad3') selectSkillByIndex(2);
+                e.preventDefault();
+                return;
+            }
+
+            if (!isGameStarted) return;
+
+            if (e.code === 'Space' || e.code === 'KeyK' || e.code === 'KeyX' || e.code === 'ArrowUp') {
+                if (e.code === 'Space' || e.code === 'KeyK' || e.code === 'KeyX') {
+                    triggerJump();
+                    e.preventDefault();
+                }
+            }
+            if (e.code === 'KeyZ') {
+                fireBullet();
+                e.preventDefault();
+            }
+            if (e.code === 'KeyC') {
+                triggerInvincible();
+                e.preventDefault();
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+
+        function triggerJump() {
+            if (isGameOver || isPausedForSkill || !isGameStarted) return;
+
+            if (!player.isJumping) {
+                player.vy = player.jumpPower;
+                player.isJumping = true;
+                player.canDoubleJump = true;
+            } else if (player.canDoubleJump) {
+                player.vy = player.jumpPower * 0.9;
+                player.canDoubleJump = false;
+            }
+        }
+
+        function triggerInvincible() {
+            if (isGameOver || isPausedForSkill || !isGameStarted) return;
+            if (invincibleCdTimer <= 0) {
+                invincibleTimer = invincibleDuration;
+                invincibleCdTimer = invincibleCdMax;
+            }
+        }
+
+        function bindButton(id, actionDown, actionUp) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); actionDown(); });
+            el.addEventListener('touchend', (e) => { e.preventDefault(); if(actionUp) actionUp(); });
+            el.addEventListener('mousedown', actionDown);
+            if(actionUp) el.addEventListener('mouseup', actionUp);
+        }
+
+        bindButton('btnUp', () => keys['ArrowUp'] = true, () => keys['ArrowUp'] = false);
+        bindButton('btnLeft', () => keys['ArrowLeft'] = true, () => keys['ArrowLeft'] = false);
+        bindButton('btnRight', () => keys['ArrowRight'] = true, () => keys['ArrowRight'] = false);
+        bindButton('btnJump', () => triggerJump());
+        bindButton('btnFire', () => fireBullet());
+        bindButton('btnInvinc', () => triggerInvincible());
+
+        function fireBullet() {
+            if (isGameOver || isPausedForSkill || !isGameStarted) return;
+            if (player.shootCooldown > 0) return;
+
+            // 調整為 0.1 秒冷卻 (60fps 的遊戲中，0.1秒約等於 6 個影格)[cite: 1]
+            player.shootCooldown = 6;
+            player.isShooting = true;
+            player.shootFrame = 0;
+            player.shootAnimTimer = 0;
+
+            let aimX = player.facing;
+            let aimY = 0;
+
+            if (keys['ArrowUp'] || keys['KeyW']) {
+                aimY = -1;
+                aimX = 0;
+            }
+
+            if (player.weapons.normal > 0) {
+                let count = player.weapons.normal;
+                for (let i = 0; i < count; i++) {
+                    bullets.push({
+                        x: aimY < 0 ? player.x + player.width / 2 - 3 + (i * 6) : (player.facing > 0 ? player.x + player.width : player.x - 12),
+                        y: (aimY < 0 ? player.y - 10 : player.y + 20) + (i * 5),
+                        vx: aimX * 10,
+                        vy: aimY * 10,
+                        width: 12,
+                        height: 8,
+                        type: 'normal'
+                    });
+                }
+            }
+
+            if (player.weapons.scatter > 0) {
+                let totalBullets = player.weapons.scatter;
+                let spreadStep = 0.5;
+                for (let i = 0; i < totalBullets; i++) {
+                    let spreadFactor = (i - (totalBullets - 1) / 2) * spreadStep;
+                    bullets.push({
+                        x: player.facing > 0 ? player.x + player.width : player.x - 12,
+                        y: player.y + 20,
+                        vx: player.facing * 9,
+                        vy: spreadFactor,
+                        width: 12,
+                        height: 8,
+                        type: 'scatter'
+                    });
+                }
+            }
+
+            if (player.weapons.laser > 0) {
+                let count = Math.min(6, player.weapons.laser);
+                for (let i = 0; i < count; i++) {
+                    bullets.push({
+                        x: aimY < 0 ? player.x + player.width / 2 - 2 + (i * 8) : (player.facing > 0 ? player.x + player.width : player.x - 15),
+                        y: (aimY < 0 ? player.y - 15 : player.y + 20) + (i * 6),
+                        vx: aimX * 15,
+                        vy: aimY * 15,
+                        width: 18,
+                        height: 4,
+                        type: 'laser',
+                        homing: true,
+                        homingRange: 180 + (player.weapons.laser * 15)
+                    });
+                }
+            }
+        }
+
+        function updateWeaponDisplay() {
+            let activeList = [];
+            if (player.weapons.normal > 0) activeList.push(`普彈 Lv.${player.weapons.normal}`);
+            if (player.weapons.scatter > 0) activeList.push(`散彈 Lv.${player.weapons.scatter}`);
+            if (player.weapons.laser > 0) activeList.push(`雷射 Lv.${player.weapons.laser}`);
+            if (player.weapons.heal > 0) {
+                let currentChance = (1 + (player.weapons.heal - 1) * 0.5).toFixed(1);
+                activeList.push(`醫療 Lv.${player.weapons.heal} (${currentChance}%)`);
+            }
+            
+            weaponElement.textContent = activeList.join(" | ");
+        }
+
+        function openSkillChoices(isInitial = false) {
+            isPausedForSkill = true;
+            initialPick = isInitial;
+            skillOptionsContainer.innerHTML = '';
+            
+            if (isInitial) {
+                modalTitle.textContent = "🎁 遊戲即將開始！請選擇您的開局初始技能 (按 1, 2, 3)：";
+            } else {
+                modalTitle.textContent = "🎁 獲得補給箱！請選擇技能 (按 1, 2, 3)：";
+            }
+            
+            let currentHealChance = 1 + (player.weapons.heal * 0.5);
+
+            const allSkills = [
+                { 
+                    id: 'scatter', 
+                    name: `🔥 散彈強化 (Lv.${Math.min(10, player.weapons.scatter + 1)})`, 
+                    desc: '黃色子彈數量 +1（最高 10 階）', 
+                    action: () => { 
+                        if (player.weapons.scatter < 10) player.weapons.scatter++;
+                        updateWeaponDisplay();
+                    }
+                },
+                { 
+                    id: 'laser', 
+                    name: `⚡ 雷射強化 (Lv.${Math.min(10, player.weapons.laser + 1)})`, 
+                    desc: '雷射數量增加與智慧追蹤（最高 10 階）', 
+                    action: () => { 
+                        if (player.weapons.laser < 10) player.weapons.laser++;
+                        updateWeaponDisplay();
+                    }
+                },
+                { 
+                    id: 'shield', 
+                    name: '🛡️ 能量護盾', 
+                    desc: '充能防護罩（可承受 3 發子彈或撞擊）', 
+                    action: () => { 
+                        shieldCharges = 3;
+                        shieldElement.textContent = `${shieldCharges}/3`;
+                    }
+                },
+                {
+                    id: 'heal',
+                    name: `❤️ 醫療補給 (Lv.${player.weapons.heal + 1})`,
+                    desc: `觸發機率升至 ${currentHealChance.toFixed(1)}% 獲得 +1 血量`,
+                    action: () => {
+                        player.weapons.heal++;
+                        let chance = 1 + (player.weapons.heal - 1) * 0.5;
+                        let roll = Math.random() * 100;
+                        if (roll < chance) {
+                            lives += 1; 
+                        }
+                        lives += 1; 
+                        livesElement.textContent = lives;
+                        updateWeaponDisplay();
+                    }
+                }
+            ];
+
+            currentSkillChoices = [...allSkills].sort(() => Math.random() - 0.5).slice(0, 3);
+
+            currentSkillChoices.forEach((skill, index) => {
+                const card = document.createElement('div');
+                card.className = 'skill-card';
+                card.innerHTML = `<h3>[${index + 1}] ${skill.name}</h3><p>${skill.desc}</p>`;
+                card.onclick = () => selectSkillByIndex(index);
+                skillOptionsContainer.appendChild(card);
+            });
+            skillModal.style.display = 'flex';
+        }
+
+        function selectSkillByIndex(index) {
+            if (!isPausedForSkill || !currentSkillChoices[index]) return;
+            currentSkillChoices[index].action();
+            skillModal.style.display = 'none';
+            isPausedForSkill = false;
+
+            if (initialPick) {
+                startCountdown();
+            }
+        }
+
+        function startCountdown() {
+            countdownTimer = 180; 
+        }
+
+        let enemySpawnTimer = 0;
+        function handleSpawns() {
+            let scoreThreshold = wave * 10000;
+            if (score >= scoreThreshold && !boss) {
+                let bossHp = Math.round(35 * Math.pow(2, wave - 1));
+                boss = {
+                    x: canvas.width - 90,
+                    y: groundY - 90,
+                    width: 70,
+                    height: 90,
+                    hp: bossHp,
+                    maxHp: bossHp,
+                    vy: 2.0 + (wave * 0.2),
+                    shootTimer: 0
+                };
+                return;
+            }
+
+            if (boss) return;
+
+            enemySpawnTimer++;
+            let spawnInterval = Math.max(20, 45 - (wave * 3));
+            if (enemySpawnTimer > spawnInterval && enemies.length < 8) {
+                let isSky = Math.random() < 0.33; 
+                
+                let baseSpeed = 2.5 + (wave * 0.2);
+                let colorType = 'green';
+                let hp = 1;
+                let speed = baseSpeed;
+
+                if (!isSky) {
+                    let randColor = Math.random();
+                    if (randColor < 0.33) {
+                        colorType = 'red';
+                        speed = baseSpeed * 2.0; 
+                    } else if (randColor < 0.66) {
+                        colorType = 'yellow';
+                        hp = 2; 
+                    } else {
+                        colorType = 'green';
+                    }
+                }
+
+                enemies.push({
+                    x: canvas.width,
+                    y: isSky ? 15 : groundY - 38, 
+                    width: 32,
+                    height: 38,
+                    vx: -speed,
+                    isSky: isSky,
+                    colorType: colorType,
+                    hp: hp,
+                    bombTimer: 0
+                });
+                enemySpawnTimer = 0;
+            }
+        }
+
+        function takeDamage() {
+            if (invincibleTimer > 0) return;
+            if (shieldCharges > 0) {
+                shieldCharges--;
+                shieldElement.textContent = `${shieldCharges}/3`;
+                return;
+            }
+            lives--;
+            livesElement.textContent = lives;
+            if (lives <= 0) isGameOver = true;
+        }
+
+        function update() {
+            if (isGameOver || isPausedForSkill) return;
+
+            if (countdownTimer > 0) {
+                countdownTimer--;
+                if (countdownTimer === 0) {
+                    isGameStarted = true;
+                }
+                return;
+            }
+
+            if (!isGameStarted) return;
+
+            if (player.shootCooldown > 0) player.shootCooldown--;
+
+            bgScrollX += 1.2;
+            clouds.forEach(c => {
+                c.x -= c.speed;
+                if (c.x < -100) c.x = canvas.width + 50;
+            });
+
+            if (invincibleTimer > 0) invincibleTimer--;
+            if (invincibleCdTimer > 0) {
+                invincibleCdTimer--;
+                let sec = (invincibleCdTimer / 60).toFixed(1);
+                invincibleCdElement.textContent = `${sec}秒`;
+                invincibleCdElement.style.color = "#FF5252";
+            } else {
+                invincibleCdElement.textContent = "就緒 (C)";
+                invincibleCdElement.style.color = "#00E5FF";
+            }
+
+            if (keys['ArrowLeft'] || keys['KeyA']) {
+                player.vx = -player.speed;
+                player.facing = -1;
+            } else if (keys['ArrowRight'] || keys['KeyD']) {
+                player.vx = player.speed;
+                player.facing = 1;
+            } else {
+                player.vx = 0;
+            }
+
+            player.x += player.vx;
+            player.vy += gravity;
+            player.y += player.vy;
+
+            if (player.y >= groundY - player.height) {
+                player.y = groundY - player.height;
+                player.vy = 0;
+                player.isJumping = false;
+                player.canDoubleJump = false;
+            }
+
+            if (player.x < 0) player.x = 0;
+            if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
+
+            if (player.vx !== 0 && !player.isJumping) {
+                player.animTimer++;
+                if (player.animTimer > 5) {
+                    player.runFrame = (player.runFrame + 1) % 12;
+                    player.animTimer = 0;
+                }
+            } else {
+                player.runFrame = 0;
+            }
+
+            if (player.isShooting) {
+                player.shootAnimTimer++;
+                if (player.shootAnimTimer > 4) {
+                    player.shootFrame++;
+                    player.shootAnimTimer = 0;
+                    if (player.shootFrame >= 8) {
+                        player.isShooting = false;
+                        player.shootFrame = 0;
+                    }
+                }
+            }
+
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                if (b.homing) {
+                    let target = null;
+                    let minDist = b.homingRange;
+                    enemies.forEach(e => {
+                        let dist = Math.hypot((e.x + e.width/2) - b.x, (e.y + e.height/2) - b.y);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            target = e;
+                        }
+                    });
+                    if (boss) {
+                        let dist = Math.hypot((boss.x + boss.width/2) - b.x, (boss.y + boss.height/2) - b.y);
+                        if (dist < minDist) {
+                            target = boss;
+                        }
+                    }
+
+                    if (target) {
+                        let targetAngle = Math.atan2((target.y + target.height/2) - b.y, (target.x + target.width/2) - b.x);
+                        let currentAngle = Math.atan2(b.vy, b.vx);
+                        let angleDiff = targetAngle - currentAngle;
+                        let speed = Math.hypot(b.vx, b.vy);
+                        let newAngle = currentAngle + Math.max(-0.15, Math.min(0.15, angleDiff));
+                        b.vx = Math.cos(newAngle) * speed;
+                        b.vy = Math.sin(newAngle) * speed;
+                    }
+                }
+
+                b.x += b.vx;
+                b.y += b.vy;
+                if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+                    bullets.splice(i, 1);
+                }
+            }
+
+            for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                enemyBullets[i].x += enemyBullets[i].vx;
+                enemyBullets[i].y += enemyBullets[i].vy;
+
+                if (
+                    player.x < enemyBullets[i].x + enemyBullets[i].width &&
+                    player.x + player.width > enemyBullets[i].x &&
+                    player.y < enemyBullets[i].y + enemyBullets[i].height &&
+                    player.y + player.height > enemyBullets[i].y
+                ) {
+                    enemyBullets.splice(i, 1);
+                    takeDamage();
+                } else if (enemyBullets[i].x < 0 || enemyBullets[i].x > canvas.width || enemyBullets[i].y > canvas.height) {
+                    enemyBullets.splice(i, 1);
+                }
+            }
+
+            if (powerUp) {
+                if (
+                    player.x < powerUp.x + powerUp.width &&
+                    player.x + player.width > powerUp.x &&
+                    player.y < powerUp.y + powerUp.height &&
+                    player.y + player.height > powerUp.y
+                ) {
+                    powerUp = null;
+                    openSkillChoices(false);
+                }
+            }
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                enemies[i].x += enemies[i].vx;
+
+                if (enemies[i].isSky) {
+                    enemies[i].bombTimer++;
+                    if (enemies[i].bombTimer > 90) {
+                        enemyBullets.push({
+                            x: enemies[i].x,
+                            y: enemies[i].y + enemies[i].height,
+                            vx: -1.5,
+                            vy: 3.5,
+                            width: player.width * 0.9,
+                            height: player.height * 0.9
+                        });
+                        enemies[i].bombTimer = 0;
+                    }
+                }
+
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    if (
+                        bullets[j] && enemies[i] &&
+                        bullets[j].x < enemies[i].x + enemies[i].width &&
+                        bullets[j].x + bullets[j].width > enemies[i].x &&
+                        bullets[j].y < enemies[i].y + enemies[i].height &&
+                        bullets[j].y + bullets[j].height > enemies[i].y
+                    ) {
+                        bullets.splice(j, 1); 
+                        enemies[i].hp--; 
+
+                        if (enemies[i].hp <= 0) {
+                            let deadX = enemies[i].x;
+                            let deadY = enemies[i].y;
+                            enemies.splice(i, 1);
+
+                            score += 100;
+                            scoreElement.textContent = score;
+
+                            if (!powerUp && Math.random() < 0.10) {
+                                powerUp = {
+                                    x: deadX,
+                                    y: groundY - 26, 
+                                    width: 26,
+                                    height: 26
+                                };
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                if (
+                    enemies[i] &&
+                    player.x < enemies[i].x + enemies[i].width &&
+                    player.x + player.width > enemies[i].x &&
+                    player.y < enemies[i].y + enemies[i].height &&
+                    player.y + player.height > enemies[i].y
+                ) {
+                    enemies.splice(i, 1);
+                    takeDamage();
+                }
+
+                if (enemies[i] && enemies[i].x < -30) {
+                    enemies.splice(i, 1);
+                }
+            }
+
+            if (boss) {
+                boss.y += boss.vy;
+                if (boss.y <= 80 || boss.y >= groundY - boss.height) {
+                    boss.vy *= -1;
+                }
+
+                boss.shootTimer++;
+                let shootInterval = Math.max(25, 50 - (wave * 3));
+                if (boss.shootTimer > shootInterval) {
+                    let angle = Math.atan2((player.y + player.height/2) - (boss.y + boss.height/2), player.x - boss.x);
+                    enemyBullets.push({
+                        x: boss.x,
+                        y: boss.y + boss.height / 2,
+                        vx: Math.cos(angle) * (4.5 + wave * 0.2),
+                        vy: Math.sin(angle) * (4.5 + wave * 0.2),
+                        width: 12,
+                        height: 12
+                    });
+                    boss.shootTimer = 0;
+                }
+
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    if (
+                        bullets[j] &&
+                        bullets[j].x < boss.x + boss.width &&
+                        bullets[j].x + bullets[j].width > boss.x &&
+                        bullets[j].y < boss.y + boss.height &&
+                        bullets[j].y + bullets[j].height > boss.y
+                    ) {
+                        bullets.splice(j, 1);
+                        boss.hp--;
+                        score += 50;
+                        scoreElement.textContent = score;
+
+                        if (boss.hp <= 0) {
+                            boss = null;
+                            wave++;
+                            waveElement.textContent = `第 ${wave} 波`;
+                            score += 500;
+                            scoreElement.textContent = score;
+                            if (lives < 15) lives++;
+                            livesElement.textContent = lives;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            handleSpawns();
+        }
+
+        function restartGame() {
+            score = 0;
+            lives = 10;
+            shieldCharges = 0;
+            wave = 1;
+            isGameOver = false;
+            invincibleTimer = 0;
+            invincibleCdTimer = 0;
+            player.weapons = { normal: 1, scatter: 0, laser: 0, heal: 0 };
+            player.shootCooldown = 0;
+            player.x = 50;
+            player.y = 240;
+            player.isJumping = false;
+            player.canDoubleJump = false;
+            enemies = [];
+            bullets = [];
+            enemyBullets = [];
+            boss = null;
+            powerUp = null;
+            scoreElement.textContent = score;
+            livesElement.textContent = lives;
+            shieldElement.textContent = `${shieldCharges}/3`;
+            waveElement.textContent = `第 1 波`;
+            updateWeaponDisplay();
+
+            isGameStarted = false;
+            openSkillChoices(true);
+        }
+
+        function drawBackground() {
+            let skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
+            skyGrad.addColorStop(0, '#0b0b1a');
+            skyGrad.addColorStop(1, '#2c163a');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, canvas.width, groundY);
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+            clouds.forEach(c => {
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, c.size * 0.5, 0, Math.PI * 2);
+                ctx.arc(c.x + c.size * 0.4, c.y - c.size * 0.2, c.size * 0.4, 0, Math.PI * 2);
+                ctx.arc(c.x + c.size * 0.8, c.y, c.size * 0.45, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.fillStyle = '#151328';
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            let mountainOffset = (bgScrollX * 0.2) % canvas.width;
+            for (let x = -mountainOffset; x < canvas.width + 200; x += 150) {
+                ctx.lineTo(x, groundY - 110);
+                ctx.lineTo(x + 75, groundY - 160);
+                ctx.lineTo(x + 150, groundY);
+            }
+            ctx.lineTo(canvas.width, groundY);
+            ctx.fill();
+
+            ctx.fillStyle = '#1f1a3a';
+            let ruinOffset = (bgScrollX * 0.5) % 200;
+            for (let x = -ruinOffset; x < canvas.width + 200; x += 200) {
+                ctx.fillRect(x, groundY - 90, 70, 90);
+                ctx.fillStyle = '#0b0b1a';
+                ctx.fillRect(x + 15, groundY - 70, 15, 25);
+                ctx.fillRect(x + 40, groundY - 70, 15, 25);
+                ctx.fillStyle = '#1f1a3a';
+            }
+
+            ctx.fillStyle = '#111019';
+            ctx.fillRect(0, groundY - 15, canvas.width, 15);
+
+            ctx.fillStyle = '#16213e';
+            ctx.fillRect(0, groundY, canvas.width, 80);
+            
+            ctx.fillStyle = '#0a0f1d';
+            let tileOffset = bgScrollX % 40;
+            for (let x = -tileOffset; x < canvas.width; x += 40) {
+                ctx.fillRect(x, groundY + 10, 2, 50);
+            }
+
+            ctx.fillStyle = '#e94560';
+            ctx.fillRect(0, groundY, canvas.width, 4);
+        }
+
+        function drawPlayer() {
+            ctx.save();
+            ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
+            ctx.scale(player.facing, 1);
+
+            if (invincibleTimer > 0 || shieldCharges > 0) {
+                ctx.shadowColor = shieldCharges > 0 ? '#00E5FF' : '#FFD700';
+                ctx.shadowBlur = 14;
+            }
+
+            let imgToDraw, cols, rows, colIndex, rowIndex;
+
+            if (player.isShooting && shootSpriteImg.complete && shootSpriteImg.naturalWidth > 0) {
+                imgToDraw = shootSpriteImg;
+                cols = 8;
+                rows = 1;
+                colIndex = player.shootFrame;
+                rowIndex = 0;
+            } else if (runSpriteImg.complete && runSpriteImg.naturalWidth > 0) {
+                imgToDraw = runSpriteImg;
+                cols = 6;
+                rows = 2;
+                if (player.isJumping) {
+                    colIndex = 3;
+                    rowIndex = 0;
+                } else if (player.vx !== 0) {
+                    colIndex = player.runFrame % 6;
+                    rowIndex = Math.floor(player.runFrame / 6);
+                } else {
+                    colIndex = 0;
+                    rowIndex = 0;
+                }
+            } else {
+                imgToDraw = null;
+            }
+
+            if (imgToDraw && imgToDraw.complete && imgToDraw.naturalWidth > 0) {
+                let fWidth = imgToDraw.naturalWidth / cols;
+                let fHeight = imgToDraw.naturalHeight / rows;
+                let sx = colIndex * fWidth;
+                let sy = rowIndex * fHeight;
+
+                ctx.drawImage(
+                    imgToDraw,
+                    sx, sy, fWidth, fHeight,
+                    -player.width / 2, -player.height / 2, player.width, player.height
+                );
+            } else {
+                ctx.fillStyle = '#4CAF50';
+                ctx.fillRect(-player.width / 2, -player.height / 2, player.width, player.height);
+            }
+
+            ctx.restore();
+
+            if (shieldCharges > 0) {
+                ctx.save();
+                ctx.strokeStyle = '#00E5FF';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(player.x + player.width/2, player.y + player.height/2, player.width * 0.75, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        function drawEnemy(e) {
+            let monsterImgIndex = (wave - 1) % 10;
+            let currentMonsterImg = monsterImages[monsterImgIndex];
+
+            ctx.save();
+            if (!e.isSky) {
+                if (e.colorType === 'red') {
+                    ctx.filter = 'sepia(1) saturate(5) hue-rotate(300deg)'; 
+                } else if (e.colorType === 'yellow') {
+                    ctx.filter = 'sepia(1) saturate(5) hue-rotate(0deg)'; 
+                }
+            } else {
+                ctx.filter = 'sepia(1) saturate(4) hue-rotate(140deg)'; 
+            }
+
+            if (currentMonsterImg && currentMonsterImg.complete && currentMonsterImg.naturalWidth > 0) {
+                ctx.drawImage(currentMonsterImg, e.x, e.y, e.width, e.height);
+            } else {
+                ctx.fillStyle = e.isSky ? '#00BCD4' : (e.colorType === 'red' ? '#FF1744' : (e.colorType === 'yellow' ? '#FFEA00' : '#4CAF50'));
+                ctx.fillRect(e.x + 4, e.y + 4, 24, 16);
+            }
+            ctx.restore();
+        }
+
+        function drawBoss(b) {
+            let bossImgIndex = (wave - 1) % 10;
+            let currentBossImg = bossImages[bossImgIndex];
+
+            if (currentBossImg && currentBossImg.complete && currentBossImg.naturalWidth > 0) {
+                ctx.drawImage(currentBossImg, b.x, b.y, b.width, b.height);
+            } else {
+                ctx.save();
+                ctx.globalAlpha = 0.85;
+                ctx.fillStyle = '#9C27B0';
+                ctx.beginPath();
+                ctx.arc(b.x + b.width / 2, b.y + 30, 30, Math.PI, 0, false);
+                ctx.lineTo(b.x + b.width, b.y + b.height - 10);
+                ctx.lineTo(b.x + b.width * 0.75, b.y + b.height);
+                ctx.lineTo(b.x + b.width * 0.5, b.y + b.height - 12);
+                ctx.lineTo(b.x + b.width * 0.25, b.y + b.height);
+                ctx.lineTo(b.x, b.y + b.height - 10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+
+            ctx.fillStyle = '#333';
+            ctx.fillRect(b.x, b.y - 12, b.width, 6);
+            ctx.fillStyle = '#4CAF50';
+            ctx.fillRect(b.x, b.y - 12, b.width * Math.max(0, b.hp / b.maxHp), 6);
+        }
+
+        function draw() {
+            drawBackground();
+
+            if (powerUp) {
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(powerUp.x, powerUp.y, powerUp.width, powerUp.height);
+                ctx.fillStyle = '#000';
+                ctx.font = "bold 14px 'Segoe UI'";
+                ctx.fillText("S", powerUp.x + 8, powerUp.y + 19);
+            }
+
+            drawPlayer();
+
+            bullets.forEach(b => {
+                if (b.type === 'normal' && shootBulletImg.complete && shootBulletImg.naturalWidth > 0) {
+                    ctx.drawImage(shootBulletImg, b.x, b.y, b.width, b.height);
+                } else {
+                    ctx.fillStyle = b.type === 'laser' ? '#00E5FF' : '#FFEB3B';
+                    ctx.fillRect(b.x, b.y, b.width, b.height);
+                }
+            });
+
+            enemyBullets.forEach(eb => {
+                ctx.fillStyle = eb.width > 20 ? '#FF9800' : '#00E5FF';
+                ctx.fillRect(eb.x, eb.y, eb.width, eb.height);
+            });
+
+            enemies.forEach(e => drawEnemy(e));
+
+            if (boss) {
+                drawBoss(boss);
+            }
+
+            if (countdownTimer > 0) {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "#FFEB3B";
+                ctx.font = "bold 60px 'Segoe UI'";
+                ctx.textAlign = "center";
+                let secLeft = Math.ceil(countdownTimer / 60);
+                ctx.fillText(secLeft, canvas.width / 2, canvas.height / 2 + 15);
+                ctx.font = "bold 20px 'Segoe UI'";
+                ctx.fillStyle = "#fff";
+                ctx.fillText("遊戲即將開始...", canvas.width / 2, canvas.height / 2 - 40);
+                ctx.textAlign = "left";
+            }
+
+            if (isGameOver) {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.88)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "white";
+                ctx.font = "bold 30px 'Segoe UI'";
+                ctx.textAlign = "center";
+                ctx.fillText("遊戲結束 (GAME OVER)", canvas.width / 2, canvas.height / 2 - 35);
+                
+                ctx.font = "15px 'Segoe UI'";
+                ctx.fillStyle = "#aaa";
+                ctx.fillText(`最終得分: ${score}分 (生存至第 ${wave} 波)`, canvas.width / 2, canvas.height / 2);
+
+                ctx.fillStyle = "#ff4444";
+                ctx.fillRect(canvas.width / 2 - 75, canvas.height / 2 + 25, 150, 40);
+                ctx.fillStyle = "white";
+                ctx.font = "bold 16px 'Segoe UI'";
+                ctx.fillText("🔄 再次挑戰", canvas.width / 2, canvas.height / 2 + 50);
+                ctx.textAlign = "left";
+            }
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if (!isGameOver) return;
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            if (clickX >= canvas.width / 2 - 75 && clickX <= canvas.width / 2 + 75 &&
+                clickY >= canvas.height / 2 + 25 && clickY <= canvas.height / 2 + 65) {
+                restartGame();
+            }
+        });
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        openSkillChoices(true);
+        loop();
+    </script>
+</body>
+</html>
