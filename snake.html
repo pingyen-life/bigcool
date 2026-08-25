@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>手機版大畫面貪食蛇遊戲</title>
+    <title>終極響應式貪食蛇遊戲</title>
     <style>
         body {
             background-color: #1a1a1a;
@@ -16,11 +16,12 @@
             min-height: 100vh;
             margin: 0;
             touch-action: manipulation; /* 防止手機雙擊縮放延遲 */
+            overflow: hidden; /* 防止頁面捲動 */
         }
 
         h1 {
             margin: 5px 0;
-            font-size: 1.5rem;
+            font-size: 1.6rem;
             letter-spacing: 2px;
         }
 
@@ -31,19 +32,20 @@
             gap: 20px;
         }
 
-        /* 讓畫布在手機上能自動適應螢幕寬度，最大不超過 450px */
+        /* 畫布自動適應手機螢幕大小 */
         canvas {
             border: 4px solid #4CAF50;
             background-color: #111111;
             box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
             max-width: 90vw;
             max-height: 90vw;
-            width: 400px;
-            height: 400px;
+            width: 380px;
+            height: 380px;
+            border-radius: 4px;
         }
 
         .instructions {
-            margin-top: 10px;
+            margin-top: 8px;
             color: #aaaaaa;
             font-size: 0.8rem;
             text-align: center;
@@ -56,13 +58,13 @@
             font-weight: bold;
         }
 
-        /* 手機方向控制虛擬按鈕區塊 */
+        /* 手機虛擬控制按鈕區塊 */
         .controls-container {
-            margin-top: 15px;
+            margin-top: 12px;
             display: grid;
-            grid-template-columns: repeat(3, 70px);
-            grid-template-rows: repeat(2, 60px);
-            gap: 10px;
+            grid-template-columns: repeat(3, 75px);
+            grid-template-rows: repeat(2, 65px);
+            gap: 8px;
             justify-content: center;
         }
 
@@ -70,25 +72,23 @@
             background-color: #333333;
             color: white;
             border: 2px solid #555555;
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             user-select: none;
-            cursor: pointer;
             outline: none;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            transition: background 0.1s;
+            transition: background 0.05s, transform 0.05s;
         }
 
         .ctrl-btn:active {
-            background-color: #4CAF50;
-            border-color: #81C784;
-            transform: scale(0.95);
+            background-color: #66BB6A;
+            border-color: #A5D6A7;
+            transform: scale(0.92);
         }
 
-        /* 調整按鈕排版位置 */
         .btn-up { grid-column: 2; grid-row: 1; }
         .btn-left { grid-column: 1; grid-row: 2; }
         .btn-down { grid-column: 2; grid-row: 2; }
@@ -97,19 +97,19 @@
 </head>
 <body>
 
-    <h1>🐍 手機版貪食蛇</h1>
+    <h1>🐍 終極貪食蛇</h1>
     
     <div id="scoreboard">
         <div>得分: <span id="score">0</span></div>
         <div>最高分: <span id="highScore">0</span></div>
-        <div>速度等級: <span id="speedLevel">1</span></div>
+        <div>等級: <span id="speedLevel">1</span></div>
     </div>
 
     <canvas id="snakeCanvas" width="600" height="600"></canvas>
 
     <div class="instructions">
-        使用鍵盤或下方<strong>虛擬按鈕</strong>控制方向<br>
-        🔴 紅蘋果 (+10分) | <span class="highlight">🟡 金蘋果 (+30分)</span> | ⬛ 障礙物 (撞到死)
+        支援<strong>滑動螢幕</strong>、<strong>虛擬按鈕</strong>或<strong>鍵盤控制</strong><br>
+        🔴 紅蘋果 (+10) | <span class="highlight">🟡 金蘋果 (+30，會消失)</span> | ⬛ 障礙物
     </div>
 
     <!-- 手機虛擬控制按鈕 -->
@@ -145,6 +145,11 @@
         let goldenFood = null;
         let goldenFoodTimer = 0;
         let obstacles = [];
+
+        // 觸控滑動相關變數
+        let touchStartX = 0;
+        let touchStartY = 0;
+        const SWIPE_THRESHOLD = 30;
 
         // Web Audio API 音效生成器
         let audioCtx = null;
@@ -199,11 +204,54 @@
         // 鍵盤事件監聽
         document.addEventListener('keydown', (e) => handleInput(e.keyCode));
 
-        // 虛擬按鈕事件監聽 (支援點擊與觸控)
-        document.getElementById('btnUp').addEventListener('click', () => handleInput(38));
-        document.getElementById('btnLeft').addEventListener('click', () => handleInput(37));
-        document.getElementById('btnDown').addEventListener('click', () => handleInput(40));
-        document.getElementById('btnRight').addEventListener('click', () => handleInput(39));
+        // 虛擬按鈕綁定（使用 touchstart 消除 300ms 延遲，確保手機好按）
+        function bindTouchButton(elementId, keyCode) {
+            const btn = document.getElementById(elementId);
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleInput(keyCode);
+            }, { passive: false });
+            
+            // 保留滑鼠點擊支援，方便電腦測試
+            btn.addEventListener('click', () => handleInput(keyCode));
+        }
+
+        bindTouchButton('btnUp', 38);
+        bindTouchButton('btnLeft', 37);
+        bindTouchButton('btnDown', 40);
+        bindTouchButton('btnRight', 39);
+
+        // 畫布滑動控制 (Swipe)
+        canvas.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            e.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            if (isGameOver) {
+                startGame();
+                return;
+            }
+            let touchEndX = e.changedTouches[0].clientX;
+            let touchEndY = e.changedTouches[0].clientY;
+
+            let changeX = touchEndX - touchStartX;
+            let changeY = touchEndY - touchStartY;
+
+            if (Math.abs(changeX) > Math.abs(changeY)) {
+                if (Math.abs(changeX) > SWIPE_THRESHOLD) {
+                    if (changeX > 0) handleInput(39); // 右滑
+                    else handleInput(37);            // 左滑
+                }
+            } else {
+                if (Math.abs(changeY) > SWIPE_THRESHOLD) {
+                    if (changeY > 0) handleInput(40); // 下滑
+                    else handleInput(38);            // 上滑
+                }
+            }
+            e.preventDefault();
+        }, { passive: false });
 
         startGame();
 
@@ -453,7 +501,7 @@
 
             ctx.font = "18px 'Segoe UI'";
             ctx.fillStyle = "#AAAAAA";
-            ctx.fillText("點擊方向按鈕重新挑戰", canvas.width / 2, canvas.height / 2 + 25);
+            ctx.fillText("點擊按鈕或畫面重新挑戰", canvas.width / 2, canvas.height / 2 + 25);
         }
     </script>
 </body>
