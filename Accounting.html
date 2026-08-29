@@ -11,7 +11,7 @@
         body { background-color: #f4f6f9; color: #333; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         
         /* 登入畫面樣式 */
-        #authContainer { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 360px; text-align: center; }
+        #authContainer { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 360px; max-width: 100%; text-align: center; }
         #authContainer h2 { margin-bottom: 20px; color: #2c3e50; }
         .auth-group { margin-bottom: 15px; text-align: left; }
         .auth-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #666; font-weight: bold; }
@@ -52,7 +52,7 @@
         .filter-result { margin-top: 10px; font-size: 0.9rem; font-weight: bold; color: #2c3e50; width: 100%; }
 
         /* 月曆網格 */
-        .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; color: #7f8c8d; margin-bottom: 10px; }
+        .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; color: #7f8c8d; margin-bottom: 10px; font-size: 0.9rem; }
         .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 30px; }
         
         .day-cell {
@@ -87,8 +87,8 @@
         .legend-left { display: flex; align-items: center; }
 
         /* 彈窗共通樣式 */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: #fff; padding: 24px; border-radius: 12px; width: 420px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; padding: 10px; }
+        .modal-content { background: #fff; padding: 24px; border-radius: 12px; width: 420px; max-width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
         .modal-header { font-size: 1.2rem; font-weight: bold; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
         .close-btn { cursor: pointer; color: #aaa; font-size: 1.3rem; }
         .close-btn:hover { color: #333; }
@@ -116,6 +116,26 @@
         
         .back-link { font-size: 0.85rem; color: #3498db; cursor: pointer; margin-bottom: 12px; display: inline-block; }
         .back-link:hover { text-decoration: underline; }
+
+        /* 手機響應式適配 (RWD) */
+        @media (max-width: 768px) {
+            body { padding: 10px; align-items: flex-start; }
+            .container { padding: 12px; }
+            .header { flex-direction: column; gap: 10px; align-items: stretch; text-align: center; }
+            .header-actions { justify-content: center; flex-wrap: wrap; }
+            .header h2 { font-size: 1.2rem; }
+            .summary-card { grid-template-columns: 1fr; gap: 10px; }
+            .filter-section { flex-direction: column; align-items: stretch; }
+            .filter-section > div { width: 100%; }
+            .filter-section input { width: 100%; }
+            .day-cell { min-height: 70px; padding: 4px; }
+            .day-number { font-size: 0.8rem; }
+            .day-summary { font-size: 0.6rem; transform: scale(0.9); transform-origin: top left; }
+            .weekdays { font-size: 0.8rem; }
+            .chart-container { flex-direction: column; }
+            .chart-legend { max-height: 150px; width: 100%; min-width: unset; }
+            .modal-content { width: 95%; margin: 10px; padding: 16px; }
+        }
     </style>
 </head>
 <body>
@@ -406,7 +426,7 @@
 
         let monthIncome = 0;
         let monthExpense = 0;
-        let categoryExpenses = {}; // 收集本月各支出類別總額
+        let categoryExpenses = {}; 
 
         for (let day = 1; day <= totalDays; day++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -422,7 +442,6 @@
                     } else {
                         dayExpense += amt;
                         monthExpense += amt;
-                        // 累計各類別支出
                         const cat = item.category || '未分類';
                         categoryExpenses[cat] = (categoryExpenses[cat] || 0) + amt;
                     }
@@ -456,7 +475,6 @@
         balanceElem.innerText = monthBalance;
         balanceElem.style.color = monthBalance >= 0 ? '#2980b9' : '#c0392b';
 
-        // 繪製圓餅圖與列表
         renderExpenseChart(categoryExpenses, monthExpense);
         calculateCustomRange();
     }
@@ -466,7 +484,6 @@
         initCalendar();
     }
 
-    // 繪製消費分析圓餅圖
     function renderExpenseChart(categoryData, totalExpense) {
         const canvas = document.getElementById('expensePieChart');
         const ctx = canvas.getContext('2d');
@@ -478,7 +495,6 @@
         const categories = Object.keys(categoryData);
 
         if (totalExpense === 0 || categories.length === 0) {
-            // 沒有支出時顯示提示
             ctx.fillStyle = '#95a5a6';
             ctx.font = '14px sans-serif';
             ctx.textAlign = 'center';
@@ -498,7 +514,6 @@
             const sliceAngle = (amount / totalExpense) * 2 * Math.PI;
             const color = chartColors[index % chartColors.length];
 
-            // 畫圓餅扇形
             ctx.beginPath();
             ctx.moveTo(centerX, centerY);
             ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
@@ -508,10 +523,8 @@
 
             startAngle += sliceAngle;
 
-            // 計算佔比百分比
             const percentage = ((amount / totalExpense) * 100).toFixed(1);
 
-            // 建立圖例項目
             legendContainer.innerHTML += `
                 <div class="legend-item">
                     <div class="legend-left">
