@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>記帳行事曆</title>
+    <title>記帳行事曆 - 登入系統</title>
     <!-- 引入 SheetJS (xlsx) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         body { background-color: #f4f6f9; color: #333; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         
-        /* 姓名登入畫面樣式 */
+        /* 登入畫面樣式 */
         #authContainer { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 360px; max-width: 100%; text-align: center; }
         #authContainer h2 { margin-bottom: 20px; color: #2c3e50; }
         .auth-group { margin-bottom: 15px; text-align: left; }
@@ -18,6 +18,9 @@
         .auth-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; }
         .auth-btn { width: 100%; padding: 10px; background: #3498db; color: #fff; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; font-weight: bold; margin-top: 10px; transition: background 0.2s; }
         .auth-btn:hover { background: #2980b9; }
+        .switch-auth { margin-top: 15px; font-size: 0.85rem; color: #666; cursor: pointer; }
+        .switch-auth span { color: #3498db; font-weight: bold; }
+        .switch-auth span:hover { text-decoration: underline; }
         .error-msg { color: #e74c3c; font-size: 0.85rem; margin-top: 10px; display: none; }
 
         /* 主應用程式容器 */
@@ -32,6 +35,8 @@
         .btn-success:hover { background: #219653; }
         .btn-danger { background: #e74c3c; }
         .btn-danger:hover { background: #c0392b; }
+        .btn-warning { background: #f39c12; color: #fff; }
+        .btn-warning:hover { background: #d68910; }
 
         /* 總結區塊 */
         .summary-card { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 24px; }
@@ -101,7 +106,6 @@
         .form-group label { display: block; margin-bottom: 4px; font-size: 0.85rem; color: #666; font-weight: bold; }
         .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; }
         
-        /* 常用類別快選按鈕樣式 */
         .quick-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
         .quick-tag-btn { background: #f0f2f5; border: 1px solid #dcdfe6; color: #606266; padding: 4px 10px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
         .quick-tag-btn:hover { background: #e4e7ed; color: #333; border-color: #c0c4cc; }
@@ -137,15 +141,22 @@
 </head>
 <body>
 
-<!-- 姓名輸入畫面 -->
+<!-- 登入 / 註冊畫面 -->
 <div id="authContainer">
-    <h2>請輸入您的姓名</h2>
+    <h2 id="authTitle">會員登入</h2>
     <div class="auth-group">
-        <label>使用者姓名</label>
-        <input type="text" id="authUsername" placeholder="例如：王小明">
+        <label>帳號</label>
+        <input type="text" id="authUsername" placeholder="請輸入帳號">
     </div>
-    <button class="auth-btn" onclick="handleAuth()">進入記帳本</button>
+    <div class="auth-group">
+        <label>密碼</label>
+        <input type="password" id="authPassword" placeholder="請輸入密碼">
+    </div>
+    <button class="auth-btn" id="authSubmitBtn" onclick="handleAuth()">登入</button>
     <div class="error-msg" id="authError"></div>
+    <div class="switch-auth" id="switchAuthText" onclick="toggleAuthMode()">
+        還沒有帳號？點此 <span>註冊新帳號</span>
+    </div>
 </div>
 
 <!-- 記帳主程式畫面 -->
@@ -156,7 +167,7 @@
         <div class="header-actions">
             <span id="welcomeUser" style="font-size: 0.9rem; font-weight: bold; color: #555;"></span>
             <button class="btn btn-success" onclick="openExportModal()">📥 匯出</button>
-            <button class="btn btn-danger" onclick="logout()">切換使用者</button>
+            <button class="btn btn-warning" onclick="logout()">切換使用者</button>
             <button class="btn" onclick="changeMonth(1)">下個月 ▶</button>
         </div>
     </div>
@@ -300,6 +311,7 @@
 </div>
 
 <script>
+    let isRegisterMode = false;
     let currentUser = localStorage.getItem('current_logged_user') || null;
     let currentDate = new Date();
     let selectedDateStr = '';
@@ -317,14 +329,44 @@
         }
     };
 
+    function toggleAuthMode() {
+        isRegisterMode = !isRegisterMode;
+        document.getElementById('authTitle').innerText = isRegisterMode ? '註冊新帳號' : '會員登入';
+        document.getElementById('authSubmitBtn').innerText = isRegisterMode ? '註冊並登入' : '登入';
+        document.getElementById('switchAuthText').innerHTML = isRegisterMode 
+            ? '已經有帳號了？點此 <span>登入會員</span>' 
+            : '還沒有帳號？點此 <span>註冊新帳號</span>';
+        document.getElementById('authError').style.display = 'none';
+    }
+
     function handleAuth() {
         const username = document.getElementById('authUsername').value.trim();
+        const password = document.getElementById('authPassword').value.trim();
         const errorElem = document.getElementById('authError');
 
-        if (!username) {
-            errorElem.innerText = '請輸入使用者姓名！';
+        if (!username || !password) {
+            errorElem.innerText = '帳號與密碼不能為空！';
             errorElem.style.display = 'block';
             return;
+        }
+
+        let users = JSON.parse(localStorage.getItem('app_users')) || {};
+
+        if (isRegisterMode) {
+            if (users[username]) {
+                errorElem.innerText = '此帳號已經被註冊過了！';
+                errorElem.style.display = 'block';
+                return;
+            }
+            users[username] = password;
+            localStorage.setItem('app_users', JSON.stringify(users));
+            alert('註冊成功！已自動幫您登入。');
+        } else {
+            if (!users[username] || users[username] !== password) {
+                errorElem.innerText = '帳號或密碼錯誤！';
+                errorElem.style.display = 'block';
+                return;
+            }
         }
 
         currentUser = username;
@@ -339,6 +381,7 @@
         document.getElementById('mainAppContainer').style.display = 'none';
         document.getElementById('authContainer').style.display = 'block';
         document.getElementById('authUsername').value = '';
+        document.getElementById('authPassword').value = '';
     }
 
     function showApp() {
