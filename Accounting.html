@@ -3,14 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>記帳行事曆 - 登入系統</title>
-    <!-- 引入 SheetJS (xlsx) -->
+    <title>記帳行事曆</title>
+
+    <!-- PWA 與桌面 App 設定 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3498db">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="記帳行事曆">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <!-- 引入外部套件與 Google 登入 SDK -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         body { background-color: #f4f6f9; color: #333; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
         
-        /* 登入畫面樣式 */
         #authContainer { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 380px; max-width: 100%; text-align: center; }
         #authContainer h2 { margin-bottom: 20px; color: #2c3e50; }
         .auth-group { margin-bottom: 15px; text-align: left; }
@@ -25,9 +35,12 @@
         .switch-auth span:hover { text-decoration: underline; }
         .error-msg { color: #e74c3c; font-size: 0.85rem; margin-top: 10px; display: none; }
 
-        /* 主應用程式容器 */
+        .divider { display: flex; align-items: center; margin: 20px 0; color: #aaa; font-size: 0.85rem; }
+        .divider::before, .divider::after { content: ""; flex: 1; border-bottom: 1px solid #eee; }
+        .divider span { padding: 0 10px; }
+        .social-login-container { display: flex; justify-content: center; margin-top: 10px; }
+
         .container { max-width: 1000px; width: 100%; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: none; }
-        
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .header h2 { font-size: 1.5rem; color: #2c3e50; }
         .header-actions { display: flex; gap: 10px; align-items: center; }
@@ -40,7 +53,6 @@
         .btn-warning { background: #f39c12; color: #fff; }
         .btn-warning:hover { background: #d68910; }
 
-        /* 總結區塊 */
         .summary-card { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 24px; }
         .summary-item { background: #f8f9fa; padding: 16px; border-radius: 8px; border: 1px solid #e1e8ed; text-align: center; }
         .summary-item .title { font-size: 0.85rem; color: #7f8c8d; margin-bottom: 6px; }
@@ -49,38 +61,23 @@
         .summary-item.expense .amount { color: #c0392b; }
         .summary-item.balance .amount { color: #2980b9; }
 
-        /* 區間查詢 */
         .filter-section { background: #f0f7fc; padding: 16px; border-radius: 8px; margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
         .filter-section label { font-size: 0.85rem; font-weight: bold; color: #34495e; }
         .filter-section input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; }
         .filter-result { margin-top: 10px; font-size: 0.9rem; font-weight: bold; color: #2c3e50; width: 100%; }
 
-        /* 月曆網格 */
         .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; color: #7f8c8d; margin-bottom: 10px; font-size: 0.9rem; }
         .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 30px; }
         
-        .day-cell {
-            background: #fafafa;
-            border: 1px solid #e1e8ed;
-            border-radius: 8px;
-            min-height: 100px;
-            padding: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
+        .day-cell { background: #fafafa; border: 1px solid #e1e8ed; border-radius: 8px; min-height: 100px; padding: 8px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; justify-content: space-between; }
         .day-cell:hover { border-color: #3498db; background: #f0f7fc; }
         .day-cell.empty { background: transparent; border: none; cursor: default; }
-        
         .day-number { font-weight: bold; font-size: 0.95rem; color: #34495e; }
         .day-summary { font-size: 0.75rem; margin-top: 4px; }
         .income { color: #27ae60; }
         .expense { color: #c0392b; }
         .balance { font-weight: bold; color: #2980b9; }
 
-        /* 消費分析圖表區塊 */
         .chart-section { background: #f8f9fa; border: 1px solid #e1e8ed; border-radius: 12px; padding: 20px; margin-top: 20px; }
         .chart-section h3 { font-size: 1.1rem; color: #2c3e50; margin-bottom: 15px; border-bottom: 2px solid #e1e8ed; padding-bottom: 8px; }
         .chart-container { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-around; gap: 20px; }
@@ -90,7 +87,6 @@
         .legend-color { width: 14px; height: 14px; border-radius: 3px; margin-right: 8px; display: inline-block; }
         .legend-left { display: flex; align-items: center; }
 
-        /* 彈窗共通樣式 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; padding: 10px; }
         .modal-content { background: #fff; padding: 24px; border-radius: 12px; width: 420px; max-width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
         .modal-header { font-size: 1.2rem; font-weight: bold; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
@@ -116,11 +112,9 @@
         .record-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; padding: 8px 0; border-bottom: 1px dashed #f0f0f0; }
         .delete-btn { color: #e74c3c; cursor: pointer; border: none; background: none; font-size: 0.85rem; padding: 4px 8px; border-radius: 4px; }
         .delete-btn:hover { background: #fde8e8; }
-        
         .back-link { font-size: 0.85rem; color: #3498db; cursor: pointer; margin-bottom: 12px; display: inline-block; }
         .back-link:hover { text-decoration: underline; }
 
-        /* 手機響應式適配 (RWD) */
         @media (max-width: 768px) {
             body { padding: 10px; align-items: flex-start; }
             .container { padding: 12px; }
@@ -143,7 +137,6 @@
 </head>
 <body>
 
-<!-- 登入 / 註冊畫面 -->
 <div id="authContainer">
     <h2 id="authTitle">會員登入</h2>
     <div class="auth-group">
@@ -157,13 +150,22 @@
     <button class="auth-btn" id="authSubmitBtn" onclick="handleAuth()">登入</button>
     <button class="auth-btn btn-bio" id="bioLoginBtn" style="display: none;" onclick="handleBiometricLogin()">使用指紋 / Face ID 登入</button>
     
+    <div class="divider"><span>或使用第三方帳號</span></div>
+    
+    <div class="social-login-container">
+        <div id="g_id_onload"
+             data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+             data-callback="handleGoogleLogin">
+        </div>
+        <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large"></div>
+    </div>
+
     <div class="error-msg" id="authError"></div>
     <div class="switch-auth" id="switchAuthText" onclick="toggleAuthMode()">
         還沒有帳號？點此 <span>註冊新帳號</span>
     </div>
 </div>
 
-<!-- 記帳主程式畫面 -->
 <div class="container" id="mainAppContainer">
     <div class="header">
         <button class="btn" onclick="changeMonth(-1)">◀ 上個月</button>
@@ -176,7 +178,6 @@
         </div>
     </div>
 
-    <!-- 設定區塊新增綁定生物辨識按鈕 -->
     <div style="margin-bottom: 15px; text-align: right;" id="bioBindSection">
         <button class="btn btn-success" style="font-size: 0.8rem; padding: 4px 10px;" onclick="registerBiometric()">🔒 綁定本機生物辨識 (Touch/Face ID)</button>
     </div>
@@ -215,7 +216,6 @@
 
     <div class="days" id="calendarDays"></div>
 
-    <!-- 本月消費分析圓餅圖區塊 -->
     <div class="chart-section">
         <h3>📊 本月各類別消費分析</h3>
         <div class="chart-container">
@@ -225,7 +225,6 @@
     </div>
 </div>
 
-<!-- 互動彈窗 (記帳/檢視) -->
 <div class="modal" id="recordModal">
     <div class="modal-content">
         <div class="modal-header">
@@ -279,11 +278,9 @@
             <span class="back-link" onclick="switchModalView('menu')">❮ 返回選單</span>
             <div class="record-list" id="recordList"></div>
         </div>
-
     </div>
 </div>
 
-<!-- 匯出範圍選擇彈窗 -->
 <div class="modal" id="exportModal">
     <div class="modal-content">
         <div class="modal-header">
@@ -320,6 +317,15 @@
 </div>
 
 <script>
+    // 註冊 PWA Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('Service Worker 註冊成功！', reg))
+                .catch(err => console.error('Service Worker 註冊失敗：', err));
+        });
+    }
+
     let isRegisterMode = false;
     let currentUser = localStorage.getItem('current_logged_user') || null;
     let currentDate = new Date();
@@ -337,6 +343,33 @@
             showApp();
         }
     };
+
+    function parseJwt(token) {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        } catch(e) {
+            return null;
+        }
+    }
+
+    function handleGoogleLogin(response) {
+        const payload = parseJwt(response.credential);
+        if (payload && payload.email) {
+            const googleUser = `Google_${payload.name || payload.email.split('@')[0]}`;
+            currentUser = googleUser;
+            localStorage.setItem('current_logged_user', currentUser);
+            loadUserData();
+            showApp();
+            alert(`歡迎登入，${payload.name || 'Google 使用者'}！`);
+        } else {
+            alert('Google 登入失敗，請重試。');
+        }
+    }
 
     function toggleAuthMode() {
         isRegisterMode = !isRegisterMode;
@@ -395,7 +428,6 @@
         showApp();
     }
 
-    // WebAuthn 生物辨識註冊 (綁定)
     async function registerBiometric() {
         if (!window.PublicKeyCredential) {
             alert('您的瀏覽器不支援 WebAuthn 生物辨識功能。');
@@ -404,17 +436,12 @@
         try {
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
-            
             const userIdBytes = new TextEncoder().encode(currentUser);
             
             const publicKeyCredentialCreationOptions = {
                 challenge: challenge,
                 rp: { name: "記帳行事曆系統", id: window.location.hostname || "localhost" },
-                user: {
-                    id: userIdBytes,
-                    name: currentUser,
-                    displayName: currentUser
-                },
+                user: { id: userIdBytes, name: currentUser, displayName: currentUser },
                 pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
                 authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
                 timeout: 60000,
@@ -422,12 +449,9 @@
             };
 
             const credential = await navigator.credentials.create({ publicKey: publicKeyCredentialCreationOptions });
-            
-            // 儲存生物辨識憑證 ID
             let bioCreds = JSON.parse(localStorage.getItem('app_bio_creds')) || {};
             bioCreds[currentUser] = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
             localStorage.setItem('app_bio_creds', JSON.stringify(bioCreds));
-            
             alert('生物辨識（Touch ID / Face ID）綁定成功！');
         } catch (err) {
             console.error(err);
@@ -435,7 +459,6 @@
         }
     }
 
-    // WebAuthn 生物辨識登入
     async function handleBiometricLogin() {
         const username = document.getElementById('authUsername').value.trim();
         const errorElem = document.getElementById('authError');
@@ -450,21 +473,15 @@
         try {
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
-
             const decodedCredId = Uint8Array.from(atob(bioCreds[username]), c => c.charCodeAt(0));
 
             const publicKeyCredentialRequestOptions = {
                 challenge: challenge,
-                allowCredentials: [{
-                    id: decodedCredId,
-                    type: 'public-key',
-                    transports: ['internal']
-                }],
+                allowCredentials: [{ id: decodedCredId, type: 'public-key', transports: ['internal'] }],
                 userVerification: 'required'
             };
 
             const assertion = await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions });
-            
             if (assertion) {
                 currentUser = username;
                 localStorage.setItem('current_logged_user', currentUser);
@@ -531,9 +548,9 @@
 
         for (let day = 1; day <= totalDays; day++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            
             let dayIncome = 0;
             let dayExpense = 0;
+
             if (db[dateStr]) {
                 db[dateStr].forEach(item => {
                     const amt = Number(item.amount);
@@ -600,7 +617,6 @@
             ctx.font = '14px sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('本月尚無支出資料', canvas.width / 2, canvas.height / 2);
-
             legendContainer.innerHTML = `<div style="text-align:center; color:#999; font-size:0.85rem; padding: 20px;">本月無消費紀錄</div>`;
             return;
         }
@@ -623,7 +639,6 @@
             ctx.fill();
 
             startAngle += sliceAngle;
-
             const percentage = ((amount / totalExpense) * 100).toFixed(1);
 
             legendContainer.innerHTML += `
@@ -709,72 +724,75 @@
         }
     }
 
+    function addRecord(event) {
+        event.preventDefault();
+        const type = document.getElementById('type').value;
+        const amount = document.getElementById('amount').value;
+        const category = document.getElementById('category').value.trim();
+        const note = document.getElementById('note').value.trim();
+
+        if (!db[selectedDateStr]) {
+            db[selectedDateStr] = [];
+        }
+
+        db[selectedDateStr].push({ id: Date.now(), type, amount: Number(amount), category, note });
+
+        saveUserData();
+        alert('新增成功！');
+        document.getElementById('recordForm').reset();
+        switchModalView('menu');
+        initCalendar();
+    }
+
     function renderRecordList() {
         const listContainer = document.getElementById('recordList');
         listContainer.innerHTML = '';
-        
         const records = db[selectedDateStr] || [];
+
         if (records.length === 0) {
-            listContainer.innerHTML = `<div style="text-align:center; color:#999; font-size:0.9rem; padding: 20px 0;">這天還沒有記帳紀錄</div>`;
+            listContainer.innerHTML = '<div style="text-align:center; color:#999; padding: 15px;">本日尚無收支紀錄</div>';
             return;
         }
 
-        records.forEach((item, index) => {
-            const sign = item.type === 'income' ? '+' : '-';
-            const colorClass = item.type === 'income' ? 'income' : 'expense';
+        records.forEach(item => {
+            const isIncome = item.type === 'income';
+            const sign = isIncome ? '+' : '-';
+            const colorClass = isIncome ? 'income' : 'expense';
+
             listContainer.innerHTML += `
                 <div class="record-item">
                     <div>
-                        <strong style="color: #2c3e50;">[${item.category}]</strong> 
-                        <span style="color: #555;">${item.note || ''}</span>
+                        <strong style="margin-right: 8px;">[${item.category}]</strong>
+                        <span>${item.note || '無備註'}</span>
                     </div>
                     <div>
-                        <strong class="${colorClass}" style="margin-right: 8px;">${sign}${item.amount}</strong>
-                        <button class="delete-btn" onclick="deleteRecord(${index})">刪除</button>
+                        <span class="${colorClass}" style="font-weight:bold; margin-right: 10px;">${sign}${item.amount}</span>
+                        <button class="delete-btn" onclick="deleteRecord(${item.id})">刪除</button>
                     </div>
                 </div>
             `;
         });
     }
 
-    function addRecord(event) {
-        event.preventDefault();
-        const type = document.getElementById('type').value;
-        const amount = document.getElementById('amount').value;
-        const category = document.getElementById('category').value;
-        const note = document.getElementById('note').value;
+    function deleteRecord(id) {
+        if (!confirm('確定要刪除這筆紀錄嗎？')) return;
 
-        if (!db[selectedDateStr]) {
-            db[selectedDateStr] = [];
+        if (db[selectedDateStr]) {
+            db[selectedDateStr] = db[selectedDateStr].filter(item => item.id !== id);
+            if (db[selectedDateStr].length === 0) {
+                delete db[selectedDateStr];
+            }
+            saveUserData();
+            renderRecordList();
+            initCalendar();
         }
-
-        db[selectedDateStr].push({ type, amount, category, note });
-        saveUserData();
-
-        document.getElementById('amount').value = '';
-        document.getElementById('category').value = '';
-        document.getElementById('note').value = '';
-
-        switchModalView('view');
-    }
-
-    function deleteRecord(index) {
-        db[selectedDateStr].splice(index, 1);
-        if (db[selectedDateStr].length === 0) {
-            delete db[selectedDateStr];
-        }
-        saveUserData();
-        renderRecordList();
     }
 
     function openExportModal() {
+        document.getElementById('exportModal').style.display = 'flex';
         const year = currentDate.getFullYear();
         const month = String(currentDate.getMonth() + 1).padStart(2, '0');
         document.getElementById('exportMonthInput').value = `${year}-${month}`;
-        
-        document.getElementById('exportMode').value = 'all';
-        toggleExportInputs();
-        document.getElementById('exportModal').style.display = 'flex';
     }
 
     function closeExportModal() {
@@ -789,43 +807,32 @@
 
     function executeExport() {
         const mode = document.getElementById('exportMode').value;
-        let startDate = '';
-        let endDate = '';
-        let fileSuffix = '全部紀錄';
+        let exportData = [];
 
-        if (mode === 'month') {
-            const monthVal = document.getElementById('exportMonthInput').value;
-            if (!monthVal) {
-                alert('請選擇要匯出的月份！');
-                return;
-            }
-            const [y, m] = monthVal.split('-');
-            const lastDay = new Date(y, m, 0).getDate();
-            startDate = `${y}-${m}-01`;
-            endDate = `${y}-${m}-${lastDay}`;
-            fileSuffix = `${y}年${m}月`;
-        } else if (mode === 'custom') {
-            startDate = document.getElementById('exportStartDate').value;
-            endDate = document.getElementById('exportEndDate').value;
-            if (!startDate || !endDate) {
-                alert('請完整填寫開始與結束日期！');
-                return;
-            }
-            if (startDate > endDate) {
-                alert('開始日期不能大於結束日期！');
-                return;
-            }
-            fileSuffix = `${startDate}_to_${endDate}`;
-        }
-
-        let flatData = [];
         for (const dateStr in db) {
-            if (mode === 'all' || (dateStr >= startDate && dateStr <= endDate)) {
+            let include = false;
+
+            if (mode === 'all') {
+                include = true;
+            } else if (mode === 'month') {
+                const selectedMonth = document.getElementById('exportMonthInput').value;
+                if (selectedMonth && dateStr.startsWith(selectedMonth)) {
+                    include = true;
+                }
+            } else if (mode === 'custom') {
+                const startDate = document.getElementById('exportStartDate').value;
+                const endDate = document.getElementById('exportEndDate').value;
+                if (startDate && endDate && dateStr >= startDate && dateStr <= endDate) {
+                    include = true;
+                }
+            }
+
+            if (include) {
                 db[dateStr].forEach(item => {
-                    flatData.push({
+                    exportData.push({
                         "日期": dateStr,
-                        "收支類型": item.type === 'income' ? '收入' : '支出',
-                        "金額": Number(item.amount),
+                        "類型": item.type === 'income' ? '收入' : '支出',
+                        "金額": item.amount,
                         "類別": item.category,
                         "備註": item.note || ''
                     });
@@ -833,20 +840,15 @@
             }
         }
 
-        if (flatData.length === 0) {
-            alert('選取的範圍中沒有任何記帳資料可以匯出！');
+        if (exportData.length === 0) {
+            alert('選取範圍內無任何收支資料可供匯出！');
             return;
         }
 
-        flatData.sort((a, b) => a.日期.localeCompare(b.日期));
-
-        const worksheet = XLSX.utils.json_to_sheet(flatData);
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "記帳明細");
-
-        const fileName = `${currentUser}_記帳明細_${fileSuffix}.xlsx`;
-
-        XLSX.writeFile(workbook, fileName);
+        XLSX.utils.book_append_sheet(workbook, worksheet, "記帳紀錄");
+        XLSX.writeFile(workbook, `記帳紀錄_${currentUser}_${Date.now()}.xlsx`);
         closeExportModal();
     }
 </script>
