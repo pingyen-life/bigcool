@@ -18,7 +18,13 @@
         .auth-group { margin-bottom: 15px; text-align: left; }
         .auth-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #666; font-weight: bold; }
         .auth-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; }
-        .auth-btn { width: 100%; padding: 10px; background: #3498db; color: #fff; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        
+        .auth-remember { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; color: #666; margin-bottom: 15px; }
+        .auth-remember label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+        
+        .auth-btn { width: 100%; padding: 10px; background: #3498db; color: #fff; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; font-weight: bold; margin-top: 5px; transition: background 0.2s; }
+        .auth-btn:hover { background: #2980b9; }
+        .auth-switch { margin-top: 15px; font-size: 0.85rem; color: #3498db; cursor: pointer; text-decoration: underline; }
 
         .container { max-width: 1000px; width: 100%; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: none; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
@@ -77,8 +83,9 @@
 </head>
 <body>
 
+<!-- 登入 / 註冊 容器 -->
 <div id="authContainer">
-    <h2>會員登入</h2>
+    <h2 id="authTitle">會員登入</h2>
     <div class="auth-group">
         <label>帳號</label>
         <input type="text" id="authUsername" placeholder="請輸入帳號">
@@ -87,9 +94,21 @@
         <label>密碼</label>
         <input type="password" id="authPassword" placeholder="請輸入密碼">
     </div>
-    <button class="auth-btn" onclick="handleAuth()">進入系統</button>
+
+    <!-- 記住帳號密碼 -->
+    <div class="auth-remember" id="rememberBox">
+        <label>
+            <input type="checkbox" id="rememberMe"> 記住帳號密碼
+        </label>
+    </div>
+
+    <button class="auth-btn" id="authSubmitBtn" onclick="handleAuth()">進入系統</button>
+
+    <!-- 切換 登入 / 註冊 模式 -->
+    <div class="auth-switch" id="authSwitchBtn" onclick="toggleAuthMode()">還沒有帳號？點此註冊</div>
 </div>
 
+<!-- 主應用介面 -->
 <div class="container" id="mainAppContainer">
     <div class="header">
         <button class="btn" onclick="changeMonth(-1)">◀ 上個月</button>
@@ -100,10 +119,7 @@
         <div class="header-actions">
             <button class="btn btn-toggle" onclick="toggleCalendarMode()" id="switchBtn">🔄 切換至行程模式</button>
             <button class="btn btn-warning" onclick="logout()">登出</button>
-
-            <!-- 在登出右邊新增設定按鈕 -->
             <button class="btn btn-secondary" onclick="openSettingsModal()">⚙️ 設定</button>
-
             <button class="btn" onclick="changeMonth(1)">下個月 ▶</button>
         </div>
     </div>
@@ -194,14 +210,12 @@
             <span class="close-btn" onclick="closeModal('settingsModal')">&times;</span>
         </div>
 
-        <!-- 推播權限設定 -->
         <div class="setting-box">
             <label style="font-size:0.9rem; font-weight:bold;">📲 瀏覽器推播通知</label>
             <div id="notificationStatus" class="setting-status" style="color: #7f8c8d;">檢查中...</div>
             <button class="btn" onclick="requestNotificationPermission()" style="margin-top: 8px; font-size: 0.8rem; padding: 4px 10px;">開啟/授權推播權限</button>
         </div>
 
-        <!-- 自訂鬧鐘音效設定 -->
         <div class="setting-box">
             <label style="font-size:0.9rem; font-weight:bold;">🔔 自訂鬧鐘鈴聲</label>
             <input type="file" id="customAudioFile" accept="audio/*" onchange="loadCustomAudio(event)" style="margin-top: 8px; font-size: 0.8rem; width: 100%;">
@@ -219,6 +233,8 @@
 <script>
     let currentMode = 'accounting'; 
     let currentUser = localStorage.getItem('current_logged_user') || null;
+    let isRegisterMode = false;
+
     let currentDate = new Date();
     let selectedDateStr = '';
 
@@ -226,13 +242,79 @@
     let scheduleDB = [];
 
     window.onload = function() {
+        checkSavedCredentials();
         if (currentUser) showApp();
         setInterval(checkAlarms, 30000); 
     };
 
+    // 讀取「記住的帳號密碼」
+    function checkSavedCredentials() {
+        const savedUser = localStorage.getItem('remember_username');
+        const savedPass = localStorage.getItem('remember_password');
+        if (savedUser && savedPass) {
+            document.getElementById('authUsername').value = savedUser;
+            document.getElementById('authPassword').value = savedPass;
+            document.getElementById('rememberMe').checked = true;
+        }
+    }
+
+    // 切換 登入/註冊 介面模式
+    function toggleAuthMode() {
+        isRegisterMode = !isRegisterMode;
+        const title = document.getElementById('authTitle');
+        const submitBtn = document.getElementById('authSubmitBtn');
+        const switchBtn = document.getElementById('authSwitchBtn');
+        const rememberBox = document.getElementById('rememberBox');
+
+        if (isRegisterMode) {
+            title.innerText = '會員註冊';
+            submitBtn.innerText = '註冊並登入';
+            switchBtn.innerText = '已有帳號？點此登入';
+            rememberBox.style.display = 'none';
+        } else {
+            title.innerText = '會員登入';
+            submitBtn.innerText = '進入系統';
+            switchBtn.innerText = '還沒有帳號？點此註冊';
+            rememberBox.style.display = 'flex';
+        }
+    }
+
+    // 處理 登入 與 註冊 邏輯
     function handleAuth() {
         const u = document.getElementById('authUsername').value.trim();
-        if (!u) return alert('請輸入帳號');
+        const p = document.getElementById('authPassword').value.trim();
+        const remember = document.getElementById('rememberMe').checked;
+
+        if (!u || !p) return alert('請輸入帳號與密碼');
+
+        let usersDB = JSON.parse(localStorage.getItem('sys_users_db')) || {};
+
+        if (isRegisterMode) {
+            if (usersDB[u]) {
+                return alert('該帳號已被註冊，請直接登入或更換帳號');
+            }
+            usersDB[u] = p;
+            localStorage.setItem('sys_users_db', JSON.stringify(usersDB));
+            alert('註冊成功！');
+        } else {
+            if (Object.keys(usersDB).length === 0) {
+                usersDB[u] = p;
+                localStorage.setItem('sys_users_db', JSON.stringify(usersDB));
+            } else if (!usersDB[u]) {
+                return alert('帳號不存在，請先註冊');
+            } else if (usersDB[u] !== p) {
+                return alert('密碼錯誤，請重新輸入');
+            }
+        }
+
+        if (remember) {
+            localStorage.setItem('remember_username', u);
+            localStorage.setItem('remember_password', p);
+        } else {
+            localStorage.removeItem('remember_username');
+            localStorage.removeItem('remember_password');
+        }
+
         currentUser = u;
         localStorage.setItem('current_logged_user', currentUser);
         showApp();
@@ -354,7 +436,6 @@
         document.getElementById('eventModal').style.display = 'flex';
     }
 
-    // 設定視窗開關
     function openSettingsModal() {
         updateNotificationStatus();
         document.getElementById('settingsModal').style.display = 'flex';
@@ -446,7 +527,6 @@
         renderCalendar();
     }
 
-    // 設定相關：推播權限檢查與要求
     function updateNotificationStatus() {
         const el = document.getElementById('notificationStatus');
         if (!('Notification' in window)) {
@@ -456,7 +536,7 @@
             el.innerText = '✅ 推播通知已開啟';
             el.style.color = '#27ae60';
         } else if (Notification.permission === 'denied') {
-            el.innerText = '❌ 推播通知已被被封鎖（請點擊網址列旁的鎖頭解鎖）';
+            el.innerText = '❌ 推播通知已被封鎖（請點擊網址列旁的鎖頭解鎖）';
             el.style.color = '#e74c3c';
         } else {
             el.innerText = '⚠️ 未授權推播權限';
@@ -472,7 +552,6 @@
         }
     }
 
-    // 設定相關：鈴聲加載與試聽
     function loadCustomAudio(event) {
         const file = event.target.files[0];
         if (file) {
@@ -489,7 +568,6 @@
         audio.play().catch(e => alert('播放失敗，請檢查瀏覽器音訊權限：' + e));
     }
 
-    // 鬧鐘檢查
     function checkAlarms() {
         const now = new Date();
         const currentDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -516,6 +594,15 @@
         } else {
             alert(`⏰ 行程提醒：${item.time} - ${item.title}`);
         }
+    }
+
+    // 註冊 Service Worker 支援離線快取
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('Service Worker 註冊成功:', reg.scope))
+                .catch(err => console.error('Service Worker 註冊失敗:', err));
+        });
     }
 </script>
 </body>
