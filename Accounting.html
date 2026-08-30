@@ -3,19 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>記帳行事曆</title>
+    <title>記帳與行程行事曆</title>
 
-    <!-- PWA 與桌面 App 設定 -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#3498db">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="記帳行事曆">
-    <link rel="apple-touch-icon" href="icon-192.png">
-
-    <!-- 引入外部套件與 Google 登入 SDK -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
@@ -26,188 +18,109 @@
         .auth-group { margin-bottom: 15px; text-align: left; }
         .auth-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #666; font-weight: bold; }
         .auth-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; }
-        .auth-btn { width: 100%; padding: 10px; background: #3498db; color: #fff; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; font-weight: bold; margin-top: 10px; transition: background 0.2s; }
-        .auth-btn:hover { background: #2980b9; }
-        .btn-bio { background: #27ae60; margin-top: 8px; }
-        .btn-bio:hover { background: #219653; }
-        .switch-auth { margin-top: 15px; font-size: 0.85rem; color: #666; cursor: pointer; }
-        .switch-auth span { color: #3498db; font-weight: bold; }
-        .switch-auth span:hover { text-decoration: underline; }
-        .error-msg { color: #e74c3c; font-size: 0.85rem; margin-top: 10px; display: none; }
-
-        .divider { display: flex; align-items: center; margin: 20px 0; color: #aaa; font-size: 0.85rem; }
-        .divider::before, .divider::after { content: ""; flex: 1; border-bottom: 1px solid #eee; }
-        .divider span { padding: 0 10px; }
-        .social-login-container { display: flex; justify-content: center; margin-top: 10px; }
+        .auth-btn { width: 100%; padding: 10px; background: #3498db; color: #fff; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; font-weight: bold; margin-top: 10px; }
 
         .container { max-width: 1000px; width: 100%; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: none; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
         .header h2 { font-size: 1.5rem; color: #2c3e50; }
-        .header-actions { display: flex; gap: 10px; align-items: center; }
-        .btn { background: #3498db; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: background 0.2s; }
+        .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        
+        .btn { background: #3498db; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: bold; transition: background 0.2s; }
         .btn:hover { background: #2980b9; }
-        .btn-success { background: #27ae60; }
-        .btn-success:hover { background: #219653; }
+        .btn-toggle { background: #8e44ad; }
+        .btn-toggle:hover { background: #71368a; }
+        .btn-warning { background: #f39c12; }
+        .btn-secondary { background: #7f8c8d; }
+        .btn-secondary:hover { background: #6c7a7d; }
         .btn-danger { background: #e74c3c; }
-        .btn-danger:hover { background: #c0392b; }
-        .btn-warning { background: #f39c12; color: #fff; }
-        .btn-warning:hover { background: #d68910; }
+
+        .mode-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; color: #fff; display: inline-block; margin-left: 8px; }
+        .mode-accounting { background: #27ae60; }
+        .mode-schedule { background: #8e44ad; }
 
         .summary-card { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 24px; }
         .summary-item { background: #f8f9fa; padding: 16px; border-radius: 8px; border: 1px solid #e1e8ed; text-align: center; }
         .summary-item .title { font-size: 0.85rem; color: #7f8c8d; margin-bottom: 6px; }
         .summary-item .amount { font-size: 1.3rem; font-weight: bold; }
-        .summary-item.income .amount { color: #27ae60; }
-        .summary-item.expense .amount { color: #c0392b; }
-        .summary-item.balance .amount { color: #2980b9; }
-
-        .filter-section { background: #f0f7fc; padding: 16px; border-radius: 8px; margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-        .filter-section label { font-size: 0.85rem; font-weight: bold; color: #34495e; }
-        .filter-section input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; }
-        .filter-result { margin-top: 10px; font-size: 0.9rem; font-weight: bold; color: #2c3e50; width: 100%; }
-
-        .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; color: #7f8c8d; margin-bottom: 10px; font-size: 0.9rem; }
-        .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 30px; }
-        
-        .day-cell { background: #fafafa; border: 1px solid #e1e8ed; border-radius: 8px; min-height: 100px; padding: 8px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; justify-content: space-between; }
-        .day-cell:hover { border-color: #3498db; background: #f0f7fc; }
-        .day-cell.empty { background: transparent; border: none; cursor: default; }
-        .day-number { font-weight: bold; font-size: 0.95rem; color: #34495e; }
-        .day-summary { font-size: 0.75rem; margin-top: 4px; }
         .income { color: #27ae60; }
         .expense { color: #c0392b; }
-        .balance { font-weight: bold; color: #2980b9; }
 
-        .chart-section { background: #f8f9fa; border: 1px solid #e1e8ed; border-radius: 12px; padding: 20px; margin-top: 20px; }
-        .chart-section h3 { font-size: 1.1rem; color: #2c3e50; margin-bottom: 15px; border-bottom: 2px solid #e1e8ed; padding-bottom: 8px; }
-        .chart-container { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-around; gap: 20px; }
-        .chart-container canvas { max-width: 220px; max-height: 220px; }
-        .chart-legend { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; flex-grow: 1; min-width: 220px; }
-        .legend-item { display: flex; align-items: center; justify-content: space-between; font-size: 0.85rem; background: #fff; padding: 6px 10px; border-radius: 6px; border: 1px solid #eee; }
-        .legend-color { width: 14px; height: 14px; border-radius: 3px; margin-right: 8px; display: inline-block; }
-        .legend-left { display: flex; align-items: center; }
+        .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; color: #7f8c8d; margin-bottom: 10px; }
+        .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 20px; }
+        
+        .day-cell { background: #fafafa; border: 1px solid #e1e8ed; border-radius: 8px; min-height: 105px; padding: 6px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; }
+        .day-cell:hover { border-color: #3498db; background: #f0f7fc; }
+        .day-cell.empty { background: transparent; border: none; cursor: default; }
+        .day-number { font-weight: bold; font-size: 0.9rem; color: #34495e; margin-bottom: 4px; }
+        
+        .event-tag { font-size: 0.75rem; background: #f3e5f5; color: #6a1b9a; padding: 2px 4px; border-radius: 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; padding: 10px; }
-        .modal-content { background: #fff; padding: 24px; border-radius: 12px; width: 420px; max-width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.15); max-height: 90vh; overflow-y: auto; }
-        .modal-header { font-size: 1.2rem; font-weight: bold; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-content { background: #fff; padding: 24px; border-radius: 12px; width: 420px; max-width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+        .modal-header { font-size: 1.1rem; font-weight: bold; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
         .close-btn { cursor: pointer; color: #aaa; font-size: 1.3rem; }
-        .close-btn:hover { color: #333; }
-        
-        .action-menu { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
-        .action-btn { padding: 12px; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; text-align: center; transition: background 0.2s; }
-        .btn-add { background: #e8f4fd; color: #3498db; }
-        .btn-add:hover { background: #d0e8fc; }
-        .btn-view { background: #eafaf1; color: #27ae60; }
-        .btn-view:hover { background: #d4f4e2; }
 
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; margin-bottom: 4px; font-size: 0.85rem; color: #666; font-weight: bold; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-size: 0.85rem; color: #666; font-weight: bold; }
         .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; }
         
         .quick-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-        .quick-tag-btn { background: #f0f2f5; border: 1px solid #dcdfe6; color: #606266; padding: 4px 10px; font-size: 0.8rem; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
+        .quick-tag-btn { background: #f0f2f5; border: 1px solid #dcdfe6; color: #606266; padding: 4px 8px; font-size: 0.78rem; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
         .quick-tag-btn:hover { background: #e4e7ed; color: #333; border-color: #c0c4cc; }
 
-        .record-list { max-height: 220px; overflow-y: auto; margin-bottom: 16px; border-top: 1px solid #eee; padding-top: 8px; }
-        .record-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; padding: 8px 0; border-bottom: 1px dashed #f0f0f0; }
-        .delete-btn { color: #e74c3c; cursor: pointer; border: none; background: none; font-size: 0.85rem; padding: 4px 8px; border-radius: 4px; }
-        .delete-btn:hover { background: #fde8e8; }
-        .back-link { font-size: 0.85rem; color: #3498db; cursor: pointer; margin-bottom: 12px; display: inline-block; }
-        .back-link:hover { text-decoration: underline; }
+        .record-list { max-height: 200px; overflow-y: auto; margin-bottom: 15px; border-top: 1px solid #eee; padding-top: 8px; }
+        .record-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px dashed #eee; }
 
-        @media (max-width: 768px) {
-            body { padding: 10px; align-items: flex-start; }
-            .container { padding: 12px; }
-            .header { flex-direction: column; gap: 10px; align-items: stretch; text-align: center; }
-            .header-actions { justify-content: center; flex-wrap: wrap; }
-            .header h2 { font-size: 1.2rem; }
-            .summary-card { grid-template-columns: 1fr; gap: 10px; }
-            .filter-section { flex-direction: column; align-items: stretch; }
-            .filter-section > div { width: 100%; }
-            .filter-section input { width: 100%; }
-            .day-cell { min-height: 70px; padding: 4px; }
-            .day-number { font-size: 0.8rem; }
-            .day-summary { font-size: 0.6rem; transform: scale(0.9); transform-origin: top left; }
-            .weekdays { font-size: 0.8rem; }
-            .chart-container { flex-direction: column; }
-            .chart-legend { max-height: 150px; width: 100%; min-width: unset; }
-            .modal-content { width: 95%; margin: 10px; padding: 16px; }
-        }
+        .setting-box { background: #f8f9fa; border: 1px solid #e1e8ed; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+        .setting-status { font-size: 0.8rem; margin-top: 4px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="authContainer">
-    <h2 id="authTitle">會員登入</h2>
+    <h2>會員登入</h2>
     <div class="auth-group">
         <label>帳號</label>
-        <input type="text" id="authUsername" placeholder="請輸入帳號" oninput="checkUserHasBio()">
+        <input type="text" id="authUsername" placeholder="請輸入帳號">
     </div>
     <div class="auth-group">
         <label>密碼</label>
         <input type="password" id="authPassword" placeholder="請輸入密碼">
     </div>
-    <button class="auth-btn" id="authSubmitBtn" onclick="handleAuth()">登入</button>
-    <button class="auth-btn btn-bio" id="bioLoginBtn" style="display: none;" onclick="handleBiometricLogin()">使用指紋 / Face ID 登入</button>
-    
-    <div class="divider"><span>或使用第三方帳號</span></div>
-    
-    <div class="social-login-container">
-        <div id="g_id_onload"
-             data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
-             data-callback="handleGoogleLogin">
-        </div>
-        <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large"></div>
-    </div>
-
-    <div class="error-msg" id="authError"></div>
-    <div class="switch-auth" id="switchAuthText" onclick="toggleAuthMode()">
-        還沒有帳號？點此 <span>註冊新帳號</span>
-    </div>
+    <button class="auth-btn" onclick="handleAuth()">進入系統</button>
 </div>
 
 <div class="container" id="mainAppContainer">
     <div class="header">
         <button class="btn" onclick="changeMonth(-1)">◀ 上個月</button>
-        <h2 id="monthYearDisplay">2026年 8月</h2>
+        <h2>
+            <span id="monthYearDisplay">2026年 8月</span>
+            <span class="mode-badge mode-accounting" id="modeBadge">💰 記帳模式</span>
+        </h2>
         <div class="header-actions">
-            <span id="welcomeUser" style="font-size: 0.9rem; font-weight: bold; color: #555;"></span>
-            <button class="btn btn-success" onclick="openExportModal()">📥 匯出</button>
-            <button class="btn btn-warning" onclick="logout()">切換使用者</button>
+            <button class="btn btn-toggle" onclick="toggleCalendarMode()" id="switchBtn">🔄 切換至行程模式</button>
+            <button class="btn btn-warning" onclick="logout()">登出</button>
+
+            <!-- 在登出右邊新增設定按鈕 -->
+            <button class="btn btn-secondary" onclick="openSettingsModal()">⚙️ 設定</button>
+
             <button class="btn" onclick="changeMonth(1)">下個月 ▶</button>
         </div>
     </div>
 
-    <div style="margin-bottom: 15px; text-align: right;" id="bioBindSection">
-        <button class="btn btn-success" style="font-size: 0.8rem; padding: 4px 10px;" onclick="registerBiometric()">🔒 綁定本機生物辨識 (Touch/Face ID)</button>
-    </div>
-
-    <div class="summary-card">
-        <div class="summary-item income">
+    <div class="summary-card" id="accountingSummary">
+        <div class="summary-item">
             <div class="title">本月總收入</div>
-            <div class="amount" id="monthTotalIncome">0</div>
+            <div class="amount income" id="monthTotalIncome">+0</div>
         </div>
-        <div class="summary-item expense">
+        <div class="summary-item">
             <div class="title">本月總支出</div>
-            <div class="amount" id="monthTotalExpense">0</div>
+            <div class="amount expense" id="monthTotalExpense">-0</div>
         </div>
-        <div class="summary-item balance">
+        <div class="summary-item">
             <div class="title">本月結餘</div>
-            <div class="amount" id="monthTotalBalance">0</div>
+            <div class="amount" id="monthTotalBalance" style="color: #2980b9;">0</div>
         </div>
-    </div>
-
-    <div class="filter-section">
-        <div>
-            <label>開始日期：</label>
-            <input type="date" id="filterStartDate" onchange="calculateCustomRange()">
-        </div>
-        <div>
-            <label>結束日期：</label>
-            <input type="date" id="filterEndDate" onchange="calculateCustomRange()">
-        </div>
-        <button class="btn" onclick="resetFilter()" style="background: #95a5a6; padding: 6px 12px; font-size: 0.8rem;">清除</button>
-        <div class="filter-result" id="filterResultText">請選擇區間以查看統計結果</div>
     </div>
 
     <div class="weekdays">
@@ -215,641 +128,394 @@
     </div>
 
     <div class="days" id="calendarDays"></div>
-
-    <div class="chart-section">
-        <h3>📊 本月各類別消費分析</h3>
-        <div class="chart-container">
-            <canvas id="expensePieChart" width="200" height="200"></canvas>
-            <div class="chart-legend" id="chartLegend"></div>
-        </div>
-    </div>
 </div>
 
-<div class="modal" id="recordModal">
+<!-- 彈窗：新增 / 管理當日內容 -->
+<div class="modal" id="eventModal">
     <div class="modal-content">
         <div class="modal-header">
-            <span id="modalDateTitle">選擇日期</span>
-            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <span id="modalTitle">管理當天事項</span>
+            <span class="close-btn" onclick="closeModal('eventModal')">&times;</span>
         </div>
 
-        <div id="actionMenuView" class="action-menu" style="display: none;">
-            <p style="font-size: 0.9rem; color: #666; margin-bottom: 4px;">請選擇您要進行的操作：</p>
-            <button class="action-btn btn-add" onclick="switchModalView('add')">＋ 新增收支紀錄</button>
-            <button class="action-btn btn-view" onclick="switchModalView('view')">📋 查看當日消費明細</button>
-        </div>
+        <div class="record-list" id="modalRecordList"></div>
 
-        <div id="addView" style="display: none;">
-            <span class="back-link" onclick="switchModalView('menu')">❮ 返回選單</span>
-            <form id="recordForm" onsubmit="addRecord(event)">
-                <div class="form-group">
-                    <label>類型</label>
-                    <select id="type">
-                        <option value="expense">支出</option>
-                        <option value="income">收入</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>金額</label>
-                    <input type="number" id="amount" required placeholder="請輸入金額">
-                </div>
-                <div class="form-group">
-                    <label>類別</label>
-                    <input type="text" id="category" placeholder="例如：伙食、交通、薪資" required>
-                    <div class="quick-tags">
-                        <button type="button" class="quick-tag-btn" onclick="setCategory('早餐')">早餐</button>
-                        <button type="button" class="quick-tag-btn" onclick="setCategory('午餐')">午餐</button>
-                        <button type="button" class="quick-tag-btn" onclick="setCategory('晚餐')">晚餐</button>
-                        <button type="button" class="quick-tag-btn" onclick="setCategory('飲料')">飲料</button>
-                        <button type="button" class="quick-tag-btn" onclick="setCategory('交通')">交通</button>
-                        <button type="button" class="quick-tag-btn" onclick="setCategory('娛樂')">娛樂</button>
-                        <button type="button" class="quick-tag-btn" onclick="setCategory('購物')">購物</button>
-                        <button type="button" class="quick-tag-btn" onclick="setCategory('薪資')">薪資</button>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>備註</label>
-                    <input type="text" id="note" placeholder="例如：買午餐">
-                </div>
-                <button type="submit" class="btn" style="width: 100%;">確認新增</button>
-            </form>
-        </div>
-
-        <div id="viewDetailView" style="display: none;">
-            <span class="back-link" onclick="switchModalView('menu')">❮ 返回選單</span>
-            <div class="record-list" id="recordList"></div>
-        </div>
-    </div>
-</div>
-
-<div class="modal" id="exportModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <span>📊 選擇匯出範圍</span>
-            <span class="close-btn" onclick="closeExportModal()">&times;</span>
-        </div>
-        <div class="form-group">
-            <label>匯出模式</label>
-            <select id="exportMode" onchange="toggleExportInputs()">
-                <option value="all">全部歷史資料</option>
-                <option value="month">指定月份 (預設當月)</option>
-                <option value="custom">自訂日期區間</option>
-            </select>
-        </div>
-
-        <div class="form-group" id="exportMonthGroup" style="display: none;">
-            <label>選擇月份</label>
-            <input type="month" id="exportMonthInput">
-        </div>
-
-        <div id="exportCustomGroup" style="display: none;">
+        <form id="accountingForm" style="display: none;" onsubmit="addAccountingRecord(event)">
             <div class="form-group">
-                <label>開始日期</label>
-                <input type="date" id="exportStartDate">
+                <label>類型</label>
+                <select id="accType">
+                    <option value="expense">支出</option>
+                    <option value="income">收入</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>項目類別 / 備註</label>
+                <input type="text" id="accNote" placeholder="例如：早餐、交通、薪資" required>
+                <div class="quick-tags">
+                    <button type="button" class="quick-tag-btn" onclick="setQuickCategory('早餐')">早餐</button>
+                    <button type="button" class="quick-tag-btn" onclick="setQuickCategory('午餐')">午餐</button>
+                    <button type="button" class="quick-tag-btn" onclick="setQuickCategory('晚餐')">晚餐</button>
+                    <button type="button" class="quick-tag-btn" onclick="setQuickCategory('飲料')">飲料</button>
+                    <button type="button" class="quick-tag-btn" onclick="setQuickCategory('交通')">交通</button>
+                    <button type="button" class="quick-tag-btn" onclick="setQuickCategory('娛樂')">娛樂</button>
+                    <button type="button" class="quick-tag-btn" onclick="setQuickCategory('購物')">購物</button>
+                    <button type="button" class="quick-tag-btn" onclick="setQuickCategory('薪資')">薪資</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>金額</label>
+                <input type="number" id="accAmount" required placeholder="請輸入金額">
+            </div>
+
+            <button type="submit" class="btn" style="width: 100%; background: #27ae60;">＋ 新增記帳</button>
+        </form>
+
+        <form id="scheduleForm" style="display: none;" onsubmit="addScheduleRecord(event)">
+            <div class="form-group">
+                <label>行程內容</label>
+                <input type="text" id="schTitle" placeholder="例如：開會、看醫生" required>
             </div>
             <div class="form-group">
-                <label>結束日期</label>
-                <input type="date" id="exportEndDate">
+                <label>鬧鐘提醒時間</label>
+                <input type="time" id="schTime" required>
+            </div>
+            <button type="submit" class="btn" style="width: 100%; background: #8e44ad;">⏰ 新增行程與鬧鐘</button>
+        </form>
+    </div>
+</div>
+
+<!-- 彈窗：系統設定 (包含鈴聲與推播) -->
+<div class="modal" id="settingsModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span>⚙️ 系統與提醒設定</span>
+            <span class="close-btn" onclick="closeModal('settingsModal')">&times;</span>
+        </div>
+
+        <!-- 推播權限設定 -->
+        <div class="setting-box">
+            <label style="font-size:0.9rem; font-weight:bold;">📲 瀏覽器推播通知</label>
+            <div id="notificationStatus" class="setting-status" style="color: #7f8c8d;">檢查中...</div>
+            <button class="btn" onclick="requestNotificationPermission()" style="margin-top: 8px; font-size: 0.8rem; padding: 4px 10px;">開啟/授權推播權限</button>
+        </div>
+
+        <!-- 自訂鬧鐘音效設定 -->
+        <div class="setting-box">
+            <label style="font-size:0.9rem; font-weight:bold;">🔔 自訂鬧鐘鈴聲</label>
+            <input type="file" id="customAudioFile" accept="audio/*" onchange="loadCustomAudio(event)" style="margin-top: 8px; font-size: 0.8rem; width: 100%;">
+            <div style="margin-top: 10px; display: flex; gap: 8px;">
+                <button type="button" class="btn btn-secondary" onclick="testAlarmSound()" style="font-size: 0.8rem; padding: 4px 10px;">🔊 試聽鈴聲</button>
             </div>
         </div>
 
-        <button class="btn btn-success" style="width: 100%; margin-top: 10px;" onclick="executeExport()">確認匯出 Excel</button>
+        <button class="btn" onclick="closeModal('settingsModal')" style="width: 100%; margin-top: 10px;">儲存並關閉</button>
     </div>
 </div>
+
+<audio id="alarmSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
 
 <script>
-    // 註冊 PWA Service Worker
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-                .then(reg => console.log('Service Worker 註冊成功！', reg))
-                .catch(err => console.error('Service Worker 註冊失敗：', err));
-        });
-    }
-
-    let isRegisterMode = false;
+    let currentMode = 'accounting'; 
     let currentUser = localStorage.getItem('current_logged_user') || null;
     let currentDate = new Date();
     let selectedDateStr = '';
-    let db = {};
 
-    const chartColors = [
-        '#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', 
-        '#e67e22', '#1abc9c', '#34495e', '#e84393', '#00b894'
-    ];
+    let accountingDB = {};
+    let scheduleDB = [];
 
     window.onload = function() {
-        if (currentUser) {
-            loadUserData();
-            showApp();
-        }
+        if (currentUser) showApp();
+        setInterval(checkAlarms, 30000); 
     };
 
-    function parseJwt(token) {
-        try {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload);
-        } catch(e) {
-            return null;
-        }
-    }
-
-    function handleGoogleLogin(response) {
-        const payload = parseJwt(response.credential);
-        if (payload && payload.email) {
-            const googleUser = `Google_${payload.name || payload.email.split('@')[0]}`;
-            currentUser = googleUser;
-            localStorage.setItem('current_logged_user', currentUser);
-            loadUserData();
-            showApp();
-            alert(`歡迎登入，${payload.name || 'Google 使用者'}！`);
-        } else {
-            alert('Google 登入失敗，請重試。');
-        }
-    }
-
-    function toggleAuthMode() {
-        isRegisterMode = !isRegisterMode;
-        document.getElementById('authTitle').innerText = isRegisterMode ? '註冊新帳號' : '會員登入';
-        document.getElementById('authSubmitBtn').innerText = isRegisterMode ? '註冊並登入' : '登入';
-        document.getElementById('switchAuthText').innerHTML = isRegisterMode 
-            ? '已經有帳號了？點此 <span>登入會員</span>' 
-            : '還沒有帳號？點此 <span>註冊新帳號</span>';
-        document.getElementById('authError').style.display = 'none';
-        document.getElementById('bioLoginBtn').style.display = 'none';
-    }
-
-    function checkUserHasBio() {
-        const username = document.getElementById('authUsername').value.trim();
-        const bioCreds = JSON.parse(localStorage.getItem('app_bio_creds')) || {};
-        if (!isRegisterMode && username && bioCreds[username] && window.PublicKeyCredential) {
-            document.getElementById('bioLoginBtn').style.display = 'block';
-        } else {
-            document.getElementById('bioLoginBtn').style.display = 'none';
-        }
-    }
-
     function handleAuth() {
-        const username = document.getElementById('authUsername').value.trim();
-        const password = document.getElementById('authPassword').value.trim();
-        const errorElem = document.getElementById('authError');
-
-        if (!username || !password) {
-            errorElem.innerText = '帳號與密碼不能為空！';
-            errorElem.style.display = 'block';
-            return;
-        }
-
-        let users = JSON.parse(localStorage.getItem('app_users')) || {};
-
-        if (isRegisterMode) {
-            if (users[username]) {
-                errorElem.innerText = '此帳號已經被註冊過了！';
-                errorElem.style.display = 'block';
-                return;
-            }
-            users[username] = password;
-            localStorage.setItem('app_users', JSON.stringify(users));
-            alert('註冊成功！已自動幫您登入。');
-        } else {
-            if (!users[username] || users[username] !== password) {
-                errorElem.innerText = '帳號或密碼錯誤！';
-                errorElem.style.display = 'block';
-                return;
-            }
-        }
-
-        currentUser = username;
+        const u = document.getElementById('authUsername').value.trim();
+        if (!u) return alert('請輸入帳號');
+        currentUser = u;
         localStorage.setItem('current_logged_user', currentUser);
-        loadUserData();
         showApp();
-    }
-
-    async function registerBiometric() {
-        if (!window.PublicKeyCredential) {
-            alert('您的瀏覽器不支援 WebAuthn 生物辨識功能。');
-            return;
-        }
-        try {
-            const challenge = new Uint8Array(32);
-            window.crypto.getRandomValues(challenge);
-            const userIdBytes = new TextEncoder().encode(currentUser);
-            
-            const publicKeyCredentialCreationOptions = {
-                challenge: challenge,
-                rp: { name: "記帳行事曆系統", id: window.location.hostname || "localhost" },
-                user: { id: userIdBytes, name: currentUser, displayName: currentUser },
-                pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
-                authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
-                timeout: 60000,
-                attestation: "direct"
-            };
-
-            const credential = await navigator.credentials.create({ publicKey: publicKeyCredentialCreationOptions });
-            let bioCreds = JSON.parse(localStorage.getItem('app_bio_creds')) || {};
-            bioCreds[currentUser] = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-            localStorage.setItem('app_bio_creds', JSON.stringify(bioCreds));
-            alert('生物辨識（Touch ID / Face ID）綁定成功！');
-        } catch (err) {
-            console.error(err);
-            alert('綁定失敗或已取消操作。');
-        }
-    }
-
-    async function handleBiometricLogin() {
-        const username = document.getElementById('authUsername').value.trim();
-        const errorElem = document.getElementById('authError');
-        const bioCreds = JSON.parse(localStorage.getItem('app_bio_creds')) || {};
-
-        if (!username || !bioCreds[username]) {
-            errorElem.innerText = '此帳號尚未綁定生物辨識或帳號有誤！';
-            errorElem.style.display = 'block';
-            return;
-        }
-
-        try {
-            const challenge = new Uint8Array(32);
-            window.crypto.getRandomValues(challenge);
-            const decodedCredId = Uint8Array.from(atob(bioCreds[username]), c => c.charCodeAt(0));
-
-            const publicKeyCredentialRequestOptions = {
-                challenge: challenge,
-                allowCredentials: [{ id: decodedCredId, type: 'public-key', transports: ['internal'] }],
-                userVerification: 'required'
-            };
-
-            const assertion = await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions });
-            if (assertion) {
-                currentUser = username;
-                localStorage.setItem('current_logged_user', currentUser);
-                loadUserData();
-                showApp();
-            }
-        } catch (err) {
-            console.error(err);
-            errorElem.innerText = '生物辨識驗證失敗或已取消。';
-            errorElem.style.display = 'block';
-        }
     }
 
     function logout() {
         localStorage.removeItem('current_logged_user');
-        currentUser = null;
-        document.getElementById('mainAppContainer').style.display = 'none';
-        document.getElementById('authContainer').style.display = 'block';
-        document.getElementById('authUsername').value = '';
-        document.getElementById('authPassword').value = '';
-        document.getElementById('bioLoginBtn').style.display = 'none';
+        location.reload();
     }
 
     function showApp() {
         document.getElementById('authContainer').style.display = 'none';
         document.getElementById('mainAppContainer').style.display = 'block';
-        document.getElementById('welcomeUser').innerText = `👤 ${currentUser}`;
-        initCalendar();
+        loadData();
+        renderCalendar();
     }
 
-    function loadUserData() {
-        const userDbKey = `account_calendar_${currentUser}`;
-        db = JSON.parse(localStorage.getItem(userDbKey)) || {};
+    function loadData() {
+        accountingDB = JSON.parse(localStorage.getItem(`acc_${currentUser}`)) || {};
+        scheduleDB = JSON.parse(localStorage.getItem(`sch_${currentUser}`)) || [];
     }
 
-    function saveUserData() {
-        const userDbKey = `account_calendar_${currentUser}`;
-        localStorage.setItem(userDbKey, JSON.stringify(db));
+    function saveData() {
+        localStorage.setItem(`acc_${currentUser}`, JSON.stringify(accountingDB));
+        localStorage.setItem(`sch_${currentUser}`, JSON.stringify(scheduleDB));
     }
 
-    function setCategory(categoryName) {
-        document.getElementById('category').value = categoryName;
+    function toggleCalendarMode() {
+        currentMode = currentMode === 'accounting' ? 'schedule' : 'accounting';
+        
+        const badge = document.getElementById('modeBadge');
+        const switchBtn = document.getElementById('switchBtn');
+        const summary = document.getElementById('accountingSummary');
+
+        if (currentMode === 'accounting') {
+            badge.innerText = '💰 記帳模式';
+            badge.className = 'mode-badge mode-accounting';
+            switchBtn.innerText = '🔄 切換至行程模式';
+            summary.style.display = 'grid';
+        } else {
+            badge.innerText = '📅 行程模式';
+            badge.className = 'mode-badge mode-schedule';
+            switchBtn.innerText = '🔄 切換至記帳模式';
+            summary.style.display = 'none';
+        }
+        renderCalendar();
     }
 
-    function initCalendar() {
+    function renderCalendar() {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
-        
         document.getElementById('monthYearDisplay').innerText = `${year}年 ${month + 1}月`;
 
-        const firstDayIndex = new Date(year, month, 1).getDay();
+        const firstDay = new Date(year, month, 1).getDay();
         const totalDays = new Date(year, month + 1, 0).getDate();
-        
-        const daysContainer = document.getElementById('calendarDays');
-        daysContainer.innerHTML = '';
+        const container = document.getElementById('calendarDays');
+        container.innerHTML = '';
 
-        for (let i = 0; i < firstDayIndex; i++) {
-            daysContainer.innerHTML += `<div class="day-cell empty"></div>`;
+        for (let i = 0; i < firstDay; i++) {
+            container.innerHTML += `<div class="day-cell empty"></div>`;
         }
 
-        let monthIncome = 0;
-        let monthExpense = 0;
-        let categoryExpenses = {}; 
+        let totalInc = 0, totalExp = 0;
 
         for (let day = 1; day <= totalDays; day++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            let dayIncome = 0;
-            let dayExpense = 0;
+            let contentHTML = '';
 
-            if (db[dateStr]) {
-                db[dateStr].forEach(item => {
-                    const amt = Number(item.amount);
-                    if (item.type === 'income') {
-                        dayIncome += amt;
-                        monthIncome += amt;
-                    } else {
-                        dayExpense += amt;
-                        monthExpense += amt;
-                        const cat = item.category || '未分類';
-                        categoryExpenses[cat] = (categoryExpenses[cat] || 0) + amt;
-                    }
+            if (currentMode === 'accounting') {
+                let inc = 0, exp = 0;
+                if (accountingDB[dateStr]) {
+                    accountingDB[dateStr].forEach(r => {
+                        if (r.type === 'income') inc += r.amount;
+                        else exp += r.amount;
+                    });
+                }
+                totalInc += inc;
+                totalExp += exp;
+
+                if (inc > 0 || exp > 0) {
+                    contentHTML = `
+                        <div style="font-size:0.75rem; margin-top:auto;">
+                            ${inc > 0 ? `<div class="income">+${inc}</div>` : ''}
+                            ${exp > 0 ? `<div class="expense">-${exp}</div>` : ''}
+                        </div>`;
+                }
+            } else { 
+                const events = scheduleDB.filter(s => s.date === dateStr);
+                events.forEach(e => {
+                    contentHTML += `<div class="event-tag">⏰ ${e.time} ${e.title}</div>`;
                 });
             }
-            const balance = dayIncome - dayExpense;
 
-            let summaryHTML = '';
-            if (dayIncome > 0 || dayExpense > 0) {
-                summaryHTML = `
-                    <div class="day-summary">
-                        ${dayIncome > 0 ? `<div class="income">+${dayIncome}</div>` : ''}
-                        ${dayExpense > 0 ? `<div class="expense">-${dayExpense}</div>` : ''}
-                        <div class="balance">結: ${balance}</div>
-                    </div>
-                `;
-            }
-
-            daysContainer.innerHTML += `
+            container.innerHTML += `
                 <div class="day-cell" onclick="openModal('${dateStr}')">
                     <div class="day-number">${day}</div>
-                    ${summaryHTML}
-                </div>
-            `;
+                    ${contentHTML}
+                </div>`;
         }
 
-        document.getElementById('monthTotalIncome').innerText = `+${monthIncome}`;
-        document.getElementById('monthTotalExpense').innerText = `-${monthExpense}`;
-        const monthBalance = monthIncome - monthExpense;
-        const balanceElem = document.getElementById('monthTotalBalance');
-        balanceElem.innerText = monthBalance;
-        balanceElem.style.color = monthBalance >= 0 ? '#2980b9' : '#c0392b';
-
-        renderExpenseChart(categoryExpenses, monthExpense);
-        calculateCustomRange();
+        document.getElementById('monthTotalIncome').innerText = `+${totalInc}`;
+        document.getElementById('monthTotalExpense').innerText = `-${totalExp}`;
+        document.getElementById('monthTotalBalance').innerText = totalInc - totalExp;
     }
 
-    function changeMonth(direction) {
-        currentDate.setMonth(currentDate.getMonth() + direction);
-        initCalendar();
-    }
-
-    function renderExpenseChart(categoryData, totalExpense) {
-        const canvas = document.getElementById('expensePieChart');
-        const ctx = canvas.getContext('2d');
-        const legendContainer = document.getElementById('chartLegend');
-        
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        legendContainer.innerHTML = '';
-
-        const categories = Object.keys(categoryData);
-
-        if (totalExpense === 0 || categories.length === 0) {
-            ctx.fillStyle = '#95a5a6';
-            ctx.font = '14px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('本月尚無支出資料', canvas.width / 2, canvas.height / 2);
-            legendContainer.innerHTML = `<div style="text-align:center; color:#999; font-size:0.85rem; padding: 20px;">本月無消費紀錄</div>`;
-            return;
-        }
-
-        let startAngle = 0;
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const radius = Math.min(centerX, centerY) - 10;
-
-        categories.forEach((cat, index) => {
-            const amount = categoryData[cat];
-            const sliceAngle = (amount / totalExpense) * 2 * Math.PI;
-            const color = chartColors[index % chartColors.length];
-
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
-            ctx.closePath();
-            ctx.fillStyle = color;
-            ctx.fill();
-
-            startAngle += sliceAngle;
-            const percentage = ((amount / totalExpense) * 100).toFixed(1);
-
-            legendContainer.innerHTML += `
-                <div class="legend-item">
-                    <div class="legend-left">
-                        <span class="legend-color" style="background-color: ${color};"></span>
-                        <span>${cat}</span>
-                    </div>
-                    <div>
-                        <strong style="color: #333; margin-right: 6px;">$${amount}</strong>
-                        <span style="color: #7f8c8d; font-size: 0.8rem;">(${percentage}%)</span>
-                    </div>
-                </div>
-            `;
-        });
-    }
-
-    function calculateCustomRange() {
-        const startStr = document.getElementById('filterStartDate').value;
-        const endStr = document.getElementById('filterEndDate').value;
-        const resultText = document.getElementById('filterResultText');
-
-        if (!startStr || !endStr) {
-            resultText.innerText = '請完整選擇「開始日期」與「結束日期」以檢視區間統計';
-            return;
-        }
-
-        if (startStr > endStr) {
-            resultText.innerText = '開始日期不能大於結束日期！';
-            return;
-        }
-
-        let customIncome = 0;
-        let customExpense = 0;
-
-        for (const dateStr in db) {
-            if (dateStr >= startStr && dateStr <= endStr) {
-                db[dateStr].forEach(item => {
-                    if (item.type === 'income') customIncome += Number(item.amount);
-                    else customExpense += Number(item.amount);
-                });
-            }
-        }
-
-        const customBalance = customIncome - customExpense;
-        resultText.innerHTML = `📊 區間統計 (${startStr} ~ ${endStr})：
-            <span class="income">收入 +${customIncome}</span> | 
-            <span class="expense">支出 -${customExpense}</span> | 
-            <span class="balance">結餘 ${customBalance}</span>`;
-    }
-
-    function resetFilter() {
-        document.getElementById('filterStartDate').value = '';
-        document.getElementById('filterEndDate').value = '';
-        document.getElementById('filterResultText').innerText = '請選擇區間以查看統計結果';
+    function changeMonth(dir) {
+        currentDate.setMonth(currentDate.getMonth() + dir);
+        renderCalendar();
     }
 
     function openModal(dateStr) {
         selectedDateStr = dateStr;
-        document.getElementById('modalDateTitle').innerText = `${dateStr} 記帳管理`;
-        switchModalView('menu');
-        document.getElementById('recordModal').style.display = 'flex';
+        document.getElementById('modalTitle').innerText = `${dateStr} (${currentMode === 'accounting' ? '記帳' : '行程'})`;
+        
+        document.getElementById('accountingForm').style.display = currentMode === 'accounting' ? 'block' : 'none';
+        document.getElementById('scheduleForm').style.display = currentMode === 'schedule' ? 'block' : 'none';
+
+        renderModalList();
+        document.getElementById('eventModal').style.display = 'flex';
     }
 
-    function closeModal() {
-        document.getElementById('recordModal').style.display = 'none';
-        document.getElementById('recordForm').reset();
-        initCalendar(); 
+    // 設定視窗開關
+    function openSettingsModal() {
+        updateNotificationStatus();
+        document.getElementById('settingsModal').style.display = 'flex';
     }
 
-    function switchModalView(viewName) {
-        document.getElementById('actionMenuView').style.display = 'none';
-        document.getElementById('addView').style.display = 'none';
-        document.getElementById('viewDetailView').style.display = 'none';
+    function closeModal(id) {
+        document.getElementById(id).style.display = 'none';
+    }
 
-        if (viewName === 'menu') {
-            document.getElementById('actionMenuView').style.display = 'flex';
-        } else if (viewName === 'add') {
-            document.getElementById('addView').style.display = 'block';
-        } else if (viewName === 'view') {
-            document.getElementById('viewDetailView').style.display = 'block';
-            renderRecordList();
+    function setQuickCategory(name) {
+        document.getElementById('accNote').value = name;
+    }
+
+    function renderModalList() {
+        const list = document.getElementById('modalRecordList');
+        list.innerHTML = '';
+
+        if (currentMode === 'accounting') {
+            const records = accountingDB[selectedDateStr] || [];
+            if (records.length === 0) list.innerHTML = '<div style="color:#aaa; text-align:center;">當天無記帳紀錄</div>';
+            records.forEach((r, idx) => {
+                list.innerHTML += `
+                    <div class="record-item">
+                        <span>${r.note} (${r.type === 'income' ? '收入' : '支出'})</span>
+                        <strong class="${r.type}">${r.type === 'income' ? '+' : '-'}${r.amount}</strong>
+                        <button onclick="deleteAcc(${idx})" class="btn btn-danger" style="padding:2px 6px; font-size:0.7rem;">刪除</button>
+                    </div>`;
+            });
+        } else {
+            const events = scheduleDB.filter(s => s.date === selectedDateStr);
+            if (events.length === 0) list.innerHTML = '<div style="color:#aaa; text-align:center;">當天無行程</div>';
+            events.forEach(e => {
+                list.innerHTML += `
+                    <div class="record-item">
+                        <span>⏰ ${e.time} - ${e.title}</span>
+                        <button onclick="deleteSch('${e.id}')" class="btn btn-danger" style="padding:2px 6px; font-size:0.7rem;">刪除</button>
+                    </div>`;
+            });
         }
     }
 
-    function addRecord(event) {
-        event.preventDefault();
-        const type = document.getElementById('type').value;
-        const amount = document.getElementById('amount').value;
-        const category = document.getElementById('category').value.trim();
-        const note = document.getElementById('note').value.trim();
+    function addAccountingRecord(e) {
+        e.preventDefault();
+        const type = document.getElementById('accType').value;
+        const amount = Number(document.getElementById('accAmount').value);
+        const note = document.getElementById('accNote').value.trim();
 
-        if (!db[selectedDateStr]) {
-            db[selectedDateStr] = [];
-        }
+        if (!accountingDB[selectedDateStr]) accountingDB[selectedDateStr] = [];
+        accountingDB[selectedDateStr].push({ type, amount, note });
 
-        db[selectedDateStr].push({ id: Date.now(), type, amount: Number(amount), category, note });
-
-        saveUserData();
-        alert('新增成功！');
-        document.getElementById('recordForm').reset();
-        switchModalView('menu');
-        initCalendar();
+        saveData();
+        renderModalList();
+        renderCalendar();
+        document.getElementById('accAmount').value = '';
+        document.getElementById('accNote').value = '';
     }
 
-    function renderRecordList() {
-        const listContainer = document.getElementById('recordList');
-        listContainer.innerHTML = '';
-        const records = db[selectedDateStr] || [];
+    function addScheduleRecord(e) {
+        e.preventDefault();
+        const title = document.getElementById('schTitle').value.trim();
+        const time = document.getElementById('schTime').value;
 
-        if (records.length === 0) {
-            listContainer.innerHTML = '<div style="text-align:center; color:#999; padding: 15px;">本日尚無收支紀錄</div>';
-            return;
+        scheduleDB.push({
+            id: Date.now().toString(),
+            date: selectedDateStr,
+            time: time,
+            title: title,
+            notified: false
+        });
+
+        saveData();
+        renderModalList();
+        renderCalendar();
+        document.getElementById('schTitle').value = '';
+        document.getElementById('schTime').value = '';
+    }
+
+    function deleteAcc(idx) {
+        accountingDB[selectedDateStr].splice(idx, 1);
+        saveData();
+        renderModalList();
+        renderCalendar();
+    }
+
+    function deleteSch(id) {
+        scheduleDB = scheduleDB.filter(s => s.id !== id);
+        saveData();
+        renderModalList();
+        renderCalendar();
+    }
+
+    // 設定相關：推播權限檢查與要求
+    function updateNotificationStatus() {
+        const el = document.getElementById('notificationStatus');
+        if (!('Notification' in window)) {
+            el.innerText = '❌ 您的瀏覽器不支援推播通知';
+            el.style.color = '#e74c3c';
+        } else if (Notification.permission === 'granted') {
+            el.innerText = '✅ 推播通知已開啟';
+            el.style.color = '#27ae60';
+        } else if (Notification.permission === 'denied') {
+            el.innerText = '❌ 推播通知已被被封鎖（請點擊網址列旁的鎖頭解鎖）';
+            el.style.color = '#e74c3c';
+        } else {
+            el.innerText = '⚠️ 未授權推播權限';
+            el.style.color = '#f39c12';
         }
+    }
 
-        records.forEach(item => {
-            const isIncome = item.type === 'income';
-            const sign = isIncome ? '+' : '-';
-            const colorClass = isIncome ? 'income' : 'expense';
+    function requestNotificationPermission() {
+        if ('Notification' in window) {
+            Notification.requestPermission().then(permission => {
+                updateNotificationStatus();
+            });
+        }
+    }
 
-            listContainer.innerHTML += `
-                <div class="record-item">
-                    <div>
-                        <strong style="margin-right: 8px;">[${item.category}]</strong>
-                        <span>${item.note || '無備註'}</span>
-                    </div>
-                    <div>
-                        <span class="${colorClass}" style="font-weight:bold; margin-right: 10px;">${sign}${item.amount}</span>
-                        <button class="delete-btn" onclick="deleteRecord(${item.id})">刪除</button>
-                    </div>
-                </div>
-            `;
+    // 設定相關：鈴聲加載與試聽
+    function loadCustomAudio(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            const audio = document.getElementById('alarmSound');
+            audio.src = url;
+            alert('已成功設定自訂提醒鈴聲！');
+        }
+    }
+
+    function testAlarmSound() {
+        const audio = document.getElementById('alarmSound');
+        audio.currentTime = 0;
+        audio.play().catch(e => alert('播放失敗，請檢查瀏覽器音訊權限：' + e));
+    }
+
+    // 鬧鐘檢查
+    function checkAlarms() {
+        const now = new Date();
+        const currentDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const currentTimeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        scheduleDB.forEach(item => {
+            if (item.date === currentDateStr && item.time === currentTimeStr && !item.notified) {
+                triggerAlarm(item);
+                item.notified = true;
+                saveData();
+            }
         });
     }
 
-    function deleteRecord(id) {
-        if (!confirm('確定要刪除這筆紀錄嗎？')) return;
+    function triggerAlarm(item) {
+        const audio = document.getElementById('alarmSound');
+        audio.play().catch(e => console.log('音效播放被瀏覽器阻擋：', e));
 
-        if (db[selectedDateStr]) {
-            db[selectedDateStr] = db[selectedDateStr].filter(item => item.id !== id);
-            if (db[selectedDateStr].length === 0) {
-                delete db[selectedDateStr];
-            }
-            saveUserData();
-            renderRecordList();
-            initCalendar();
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('⏰ 行程提醒', {
+                body: `${item.time} - ${item.title}`,
+                icon: 'icon-192.png'
+            });
+        } else {
+            alert(`⏰ 行程提醒：${item.time} - ${item.title}`);
         }
-    }
-
-    function openExportModal() {
-        document.getElementById('exportModal').style.display = 'flex';
-        const year = currentDate.getFullYear();
-        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-        document.getElementById('exportMonthInput').value = `${year}-${month}`;
-    }
-
-    function closeExportModal() {
-        document.getElementById('exportModal').style.display = 'none';
-    }
-
-    function toggleExportInputs() {
-        const mode = document.getElementById('exportMode').value;
-        document.getElementById('exportMonthGroup').style.display = mode === 'month' ? 'block' : 'none';
-        document.getElementById('exportCustomGroup').style.display = mode === 'custom' ? 'block' : 'none';
-    }
-
-    function executeExport() {
-        const mode = document.getElementById('exportMode').value;
-        let exportData = [];
-
-        for (const dateStr in db) {
-            let include = false;
-
-            if (mode === 'all') {
-                include = true;
-            } else if (mode === 'month') {
-                const selectedMonth = document.getElementById('exportMonthInput').value;
-                if (selectedMonth && dateStr.startsWith(selectedMonth)) {
-                    include = true;
-                }
-            } else if (mode === 'custom') {
-                const startDate = document.getElementById('exportStartDate').value;
-                const endDate = document.getElementById('exportEndDate').value;
-                if (startDate && endDate && dateStr >= startDate && dateStr <= endDate) {
-                    include = true;
-                }
-            }
-
-            if (include) {
-                db[dateStr].forEach(item => {
-                    exportData.push({
-                        "日期": dateStr,
-                        "類型": item.type === 'income' ? '收入' : '支出',
-                        "金額": item.amount,
-                        "類別": item.category,
-                        "備註": item.note || ''
-                    });
-                });
-            }
-        }
-
-        if (exportData.length === 0) {
-            alert('選取範圍內無任何收支資料可供匯出！');
-            return;
-        }
-
-        const worksheet = XLSX.utils.json_to_sheet(exportData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "記帳紀錄");
-        XLSX.writeFile(workbook, `記帳紀錄_${currentUser}_${Date.now()}.xlsx`);
-        closeExportModal();
     }
 </script>
 </body>
